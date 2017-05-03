@@ -9,9 +9,9 @@ def read(readme_filename):
     return open(os.path.join(os.path.dirname(__file__), readme_filename)).read()
 
 setup(
-    name='mythtv-services-api',
+    name='mythtv_services_api',
     py_modules=['send', 'utilities'],
-    packages=['mythtv-services-api'],
+    packages=['mythtv_services_api'],
     version='0.0.0',
     license='GNU/GPLv3',
     description='MythTV Services API tools.',
