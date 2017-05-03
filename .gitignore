@@ -2,5 +2,4 @@
 pkg.sh
 build/
 wheel/
-mythtv-services-api/
 mythtv_services_api.egg-info/
