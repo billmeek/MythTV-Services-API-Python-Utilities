@@ -3,7 +3,7 @@
 """Basic access utilities."""
 
 # Program Name: Utilities.py
-# Created     : May. 1, 2017
+# Created     : May 1, 2017
 #
 # Copyright (c) 2017 Bill Meek <keemllib@gmail.com>
 #
