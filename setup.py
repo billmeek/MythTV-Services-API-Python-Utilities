@@ -13,7 +13,7 @@ setup(
     py_modules=['send', 'utilities'],
     packages=['mythtv-services-api'],
     version='0.0.0',
-    license='GNU/GPLv3'
+    license='GNU/GPLv3',
     description='MythTV Services API tools.',
     long_description=read('README.md'),
     author='Bill Meek',
