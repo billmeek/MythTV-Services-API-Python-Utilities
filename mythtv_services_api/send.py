@@ -14,7 +14,7 @@ try:
 except ImportError:
     sys.exit('Install python-requests or python3-requests')
 
-__version__ = '0.0.0'
+__version__ = '0.0.3'
 
 SERVER_VERSION = 'Set to MythTV version after calls to send()'
 SESSION = None
@@ -174,7 +174,7 @@ def send(host='', port=6544, endpoint='', postdata=None, rest='', opts=None):
     Examples:
     =========
 
-    from MythTVServicesAPI import send as api
+    from mythtv_services_api import send as api
 
     api.send(host='someHostName', endpoint='Myth/GetHostName')
     Returns:

@@ -35,10 +35,9 @@ if sys.version_info[0] == 2:
 elif sys.version_info[0] == 3:
     from urllib.parse import quote
 
-###from .MythTVServicesAPI import send as s
-from . import send as s
+from mythtv_services_api import send as s
 
-__version__ = '0.0.0'
+__version__ = '0.0.3'
 
 REC_STATUS_CACHE = {}
 REC_TYPE_CACHE = {}
