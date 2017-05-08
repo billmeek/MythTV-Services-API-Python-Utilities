@@ -7,6 +7,7 @@ from __future__ import absolute_import
 
 import re
 import sys
+import tempfile
 
 try:
     import requests
@@ -14,7 +15,7 @@ try:
 except ImportError:
     sys.exit('Install python-requests or python3-requests')
 
-__version__ = '0.0.3'
+__version__ = '0.0.4'
 
 SERVER_VERSION = 'Set to MythTV version after calls to send()'
 SESSION = None
@@ -329,14 +330,31 @@ def send(host='', port=6544, endpoint='', postdata=None, rest='', opts=None):
 
     ##############################################################
     # Finally, return the response after converting the JSON to  #
-    # a dict. Or, if the wsdl option is set, return that         #
+    # a dict. Or, or WSDL/XML/Image                              #
     ##############################################################
 
     if opts['wsdl']:
         return {'WSDL': response.text}
 
-    if opts['debug']:
+    try:
+        opts['debug']
         print('Debug: 1st 60 bytes of response: {}'.format(response.text[:60]))
+    except UnicodeEncodeError:
+        pass
+
+    if opts['usexml']:
+        return response
+
+    header, image_type = response.headers['Content-Type'].split('/')
+
+    if header == 'image':
+        handle, filename = tempfile.mkstemp(suffix='.' + image_type,)
+        if opts['debug']:
+            print('Debug: created {}, remember to delete it.'.format(filename))
+        with open(filename, 'wb') as fd:
+            for chunk in response.iter_content(chunk_size=8192):
+                fd.write(chunk)
+        return {'Image': filename}
 
     try:
         return response.json()

@@ -37,7 +37,7 @@ elif sys.version_info[0] == 3:
 
 from mythtv_services_api import send as s
 
-__version__ = '0.0.3'
+__version__ = '0.0.4'
 
 REC_STATUS_CACHE = {}
 REC_TYPE_CACHE = {}
@@ -89,7 +89,7 @@ def create_find_time(time=''):
     try:
         int(UTC_OFFSET)
         utc_offset = UTC_OFFSET
-    except (NameError, ValueError):
+    except (NameError, TypeError, ValueError):
         print('Warning: Run get_utc_offset() first. using UTC offset of 0.')
         utc_offset = 0
 

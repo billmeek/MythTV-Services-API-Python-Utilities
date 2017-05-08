@@ -1,5 +1,4 @@
 *.pyc
 pkg.sh
 build/
-wheel/
 mythtv_services_api.egg-info/
