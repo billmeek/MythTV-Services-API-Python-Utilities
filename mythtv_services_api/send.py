@@ -166,7 +166,7 @@ def validate_server_header(header):
                                                      header)}
 
 
-def send(host='', port=6544, endpoint='', postdata=None, rest='', opts=None):
+def send(host='', port=6544, endpoint='', postdata=None, rest='', opts=None, timeout=None):
     """
 
     Form a URL and send it to the back/frontend. Error handling is done
@@ -220,7 +220,13 @@ def send(host='', port=6544, endpoint='', postdata=None, rest='', opts=None):
                   • It will fail if the backend requires authorization (
                     user/pass would be required)
 
-    DETAILS:
+    timeout:  May be set, in seconds. Exmples: 5, 0.001. Used to prevent 
+              script from waiting indefinitely for reply from server.
+              Note: a timeout exception is only raised if there are no bytes
+              received from the host on this socket; long downloads are not
+              affected by the timeout setting.
+
+    OPTS DETAILS:
 
     opts is a dictionary of options that may be set in the calling program.
     Default values will be used if callers don't pass all or some of their
@@ -308,9 +314,9 @@ def send(host='', port=6544, endpoint='', postdata=None, rest='', opts=None):
 
     try:
         if postdata:
-            response = SESSION.post(url, data=postdata)
+            response = SESSION.post(url, data=postdata, timeout=timeout)
         else:
-            response = SESSION.get(url)
+            response = SESSION.get(url, timeout=timeout)
     except exceptions:
         return {'Abort': 'Connection problem or Keyboard Interrupt, URL={}'
                          .format(url)}
