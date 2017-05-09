@@ -1,3 +1,4 @@
+.pylintrc
 *.pyc
 pkg.sh
 build/

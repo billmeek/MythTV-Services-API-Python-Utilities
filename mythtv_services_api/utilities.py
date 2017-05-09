@@ -37,7 +37,7 @@ elif sys.version_info[0] == 3:
 
 from mythtv_services_api import send as s
 
-__version__ = '0.0.4'
+__version__ = '0.0.5'
 
 REC_STATUS_CACHE = {}
 REC_TYPE_CACHE = {}

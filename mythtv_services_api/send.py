@@ -15,7 +15,7 @@ try:
 except ImportError:
     sys.exit('Install python-requests or python3-requests')
 
-__version__ = '0.0.4'
+__version__ = '0.0.5'
 
 SERVER_VERSION = 'Set to MythTV version after calls to send()'
 SESSION = None
@@ -44,8 +44,6 @@ def _the_response_is_unexpected(response):
 def _set_missing_opts(opts):
     """Don't force the caller to set all of the options."""
 
-    missing_opts = []
-
     if not isinstance(opts, dict):
         opts = {}
 
@@ -53,11 +51,15 @@ def _set_missing_opts(opts):
         try:
             opts[option]
         except (KeyError, TypeError):
-            missing_opts.append(option)
             opts[option] = False
 
-    if opts['debug'] and missing_opts:
-        print('Debug: Missing opts set to False: {}'.format(missing_opts))
+    try:
+        opts['timeout']
+    except KeyError:
+        opts['timeout'] = 10
+
+    if opts['debug']:
+        print('Debug: opts={}'.format(opts))
 
     return opts
 
@@ -147,7 +149,6 @@ def validate_server_header(header):
     like:
 
         MythTV/29-pre-5-g6865940-dirty Linux/3.13.0-85-generic UPnP/1.0.
-        MythTV/0.28-pre-3094-g349d3a4 Linux/3.13.0-66-generic UPnP/1.0
         MythTV/28.0-10-g57c1afb Linux/4.4.0-21-generic UPnP/1.0.
         Linux 3.13.0-65-generic, UPnP/1.0, MythTV 0.27.20150622-1
     """
@@ -165,10 +166,10 @@ def validate_server_header(header):
     return {'Abort': 'Tested on {}, not: {}.'.format(MYTHTV_VERSION_LIST,
                                                      header)}
 
-
+# pylint: disable=too-many-arguments,too-many-locals
+# pylint: disable=too-many-return-statements,too-many-branches
 def send(host='', port=6544, endpoint='', postdata=None, rest='', opts=None):
     """
-
     Form a URL and send it to the back/frontend. Error handling is done
     here too.
 
@@ -236,8 +237,16 @@ def send(host='', port=6544, endpoint='', postdata=None, rest='', opts=None):
                      Useful if watching protocol with a tool that doesn't
                      uncompress it.
 
-    opts['user']:    Digest authentication.
-    opts['pass']:
+
+    opts['timeout']: May be set, in seconds. Exmples: 5, 0.001. Used to prevent
+                     script from waiting indefinitely for a reply from the
+                     server. Note: a timeout exception is only raised if there
+                     are no bytes received from the host on this socket. Long
+                     downloads are not affected by this option. Defaults to 10
+                     seconds.
+
+    opts['user']:    Digest authentication. Usually not turned on in the
+    opts['pass']:    backend.
 
     opts['usexml']:  For testing only! If True, causes the backend to send its
                      response in XML rather than JSON. This will force an error
@@ -259,8 +268,9 @@ def send(host='', port=6544, endpoint='', postdata=None, rest='', opts=None):
     Output:
     ======
 
-    Either the response from the server in a Python dict format or an error
-    message in a dict (currently with an 'Abort' or 'Warning' key.)
+    Either the response from the server in the selected format (default is
+    JSON.) Or a dict with keys in one of: 'Abort', 'Warning', 'WSDL', or
+    'Image'.
 
     Callers can handle the response like this:
 
@@ -270,6 +280,11 @@ def send(host='', port=6544, endpoint='', postdata=None, rest='', opts=None):
             {print|sys.exit}('{}'.format(list(response.values())[0]))
 
         normal processing...
+
+    If an 'Image' key is returned, then the caller is responsible for deleting
+    the temporary filename which is returned in its value e.g.
+
+        {'Image': '/tmp/tmp5pxynqdf.jpeg'}
 
     However, some errors returned by the server are in XML, e.g. if an
     endpoint is invalid. That will cause the JSON decoder to fail. Use
@@ -308,9 +323,10 @@ def send(host='', port=6544, endpoint='', postdata=None, rest='', opts=None):
 
     try:
         if postdata:
-            response = SESSION.post(url, data=postdata)
+            response = SESSION.post(url, data=postdata,
+                                    timeout=opts['timeout'])
         else:
-            response = SESSION.get(url)
+            response = SESSION.get(url, timeout=opts['timeout'])
     except exceptions:
         return {'Abort': 'Connection problem or Keyboard Interrupt, URL={}'
                          .format(url)}
@@ -328,27 +344,24 @@ def send(host='', port=6544, endpoint='', postdata=None, rest='', opts=None):
     if _the_response_is_unexpected(server_header):
         return server_header
 
+    header, image_type = response.headers['Content-Type'].split('/')
+
     ##############################################################
-    # Finally, return the response after converting the JSON to  #
-    # a dict. Or, or WSDL/XML/Image                              #
+    # Finally, return the response in the desired format         #
     ##############################################################
 
     if opts['wsdl']:
         return {'WSDL': response.text}
 
-    try:
-        opts['debug']
-        print('Debug: 1st 60 bytes of response: {}'.format(response.text[:60]))
-    except UnicodeEncodeError:
-        pass
-
-    if opts['usexml']:
-        return response
-
-    header, image_type = response.headers['Content-Type'].split('/')
+    if opts['debug'] and not header:
+        try:
+            print('Debug: 1st 60 bytes of response: {}'
+                  .format(response.text[:60]))
+        except UnicodeEncodeError:
+            pass
 
     if header == 'image':
-        handle, filename = tempfile.mkstemp(suffix='.' + image_type,)
+        handle, filename = tempfile.mkstemp(suffix='.' + image_type)
         if opts['debug']:
             print('Debug: created {}, remember to delete it.'.format(filename))
         with open(filename, 'wb') as fd:
@@ -356,7 +369,12 @@ def send(host='', port=6544, endpoint='', postdata=None, rest='', opts=None):
                 fd.write(chunk)
         return {'Image': filename}
 
+    if opts['usexml']:
+        return response.text
+
     try:
         return response.json()
     except ValueError as err:
         return {'Abort': 'Set debug to see JSON parsing error: {}'.format(err)}
+
+# vim: set expandtab tabstop=4 shiftwidth=4 smartindent noai colorcolumn=80:
