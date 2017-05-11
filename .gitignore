@@ -1,5 +1,7 @@
 .pylintrc
 *.pyc
 pkg.sh
+push.sh
+remote_pkg.sh
 build/
 mythtv_services_api.egg-info/

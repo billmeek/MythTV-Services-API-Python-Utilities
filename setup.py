@@ -2,6 +2,7 @@
 
 import os
 from setuptools import setup
+from _version import __version__
 
 
 def read(readme_filename):
@@ -12,7 +13,7 @@ setup(
     name='mythtv_services_api',
     py_modules=['send', 'utilities'],
     packages=['mythtv_services_api'],
-    version='0.0.5',
+    version=__version__,
     license='GNU/GPLv3',
     description='MythTV Services API tools.',
     long_description=read('README.md'),

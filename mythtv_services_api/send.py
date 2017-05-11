@@ -15,7 +15,7 @@ try:
 except ImportError:
     sys.exit('Install python-requests or python3-requests')
 
-__version__ = '0.0.5'
+from _version import __version__
 
 SERVER_VERSION = 'Set to MythTV version after calls to send()'
 SESSION = None

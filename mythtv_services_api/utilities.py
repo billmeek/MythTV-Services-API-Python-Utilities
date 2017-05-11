@@ -36,8 +36,7 @@ elif sys.version_info[0] == 3:
     from urllib.parse import quote
 
 from mythtv_services_api import send as s
-
-__version__ = '0.0.5'
+from _version import __version__
 
 REC_STATUS_CACHE = {}
 REC_TYPE_CACHE = {}
