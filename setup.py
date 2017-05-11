@@ -2,7 +2,7 @@
 
 import os
 from setuptools import setup
-from _version import __version__
+from mythtv_services_api._version import __version__
 
 
 def read(readme_filename):
