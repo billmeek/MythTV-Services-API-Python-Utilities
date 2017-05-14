@@ -4,6 +4,7 @@
 
 from __future__ import print_function
 from __future__ import absolute_import
+from os import fdopen
 
 import re
 import sys
@@ -323,8 +324,7 @@ def send(host='', port=6544, endpoint='', postdata=None, rest='', opts=None):
 
     try:
         if postdata:
-            response = SESSION.post(url, data=postdata,
-                                    timeout=opts['timeout'])
+            response = SESSION.post(url, data=postdata, timeout=opts['timeout'])
         else:
             response = SESSION.get(url, timeout=opts['timeout'])
     except exceptions:
@@ -344,7 +344,10 @@ def send(host='', port=6544, endpoint='', postdata=None, rest='', opts=None):
     if _the_response_is_unexpected(server_header):
         return server_header
 
-    header, image_type = response.headers['Content-Type'].split('/')
+    try:
+        header, image_type = response.headers['Content-Type'].split('/')
+    except (KeyError, ValueError):
+        header = None
 
     ##############################################################
     # Finally, return the response in the desired format         #
@@ -364,9 +367,9 @@ def send(host='', port=6544, endpoint='', postdata=None, rest='', opts=None):
         handle, filename = tempfile.mkstemp(suffix='.' + image_type)
         if opts['debug']:
             print('Debug: created {}, remember to delete it.'.format(filename))
-        with open(filename, 'wb') as fd:
+        with fdopen(handle, 'wb') as f_obj:
             for chunk in response.iter_content(chunk_size=8192):
-                fd.write(chunk)
+                f_obj.write(chunk)
         return {'Image': filename}
 
     if opts['usexml']:

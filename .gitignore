@@ -1,6 +1,5 @@
 .pylintrc
 *.pyc
-pkg.sh
 push.sh
 remote_pkg.sh
 build/
