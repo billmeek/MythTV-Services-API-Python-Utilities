@@ -8,7 +8,10 @@ SOURCE = \
 	$(PACKAGE)/__init__.py \
 	$(PACKAGE)/_version.py
 
-$(PACKAGE).egg-info/PKG-INFO: $(SOURCE)
+usage:
+	@echo "\nUse: make install VERSION=M.m.f e.g VERSION=1.2.3\n"
+
+install: $(PACKAGE).egg-info/PKG-INFO
 	@test -n "$(VERSION)"
 	@python2 setup.py bdist_wheel
 	@sudo -H pip2 install dist/$(PACKAGE)-$(VERSION)-py2-none-any.whl

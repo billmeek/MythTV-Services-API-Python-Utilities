@@ -36,7 +36,7 @@ def _the_response_is_unexpected(response):
     """
     Really here for readability. Used for Abort/Warning cases
     where a dictionary response means there was a problem and
-    a return (with the explaination) should be made.
+    a return (with the explanation) should be made.
     """
 
     return isinstance(response, dict)
@@ -146,7 +146,7 @@ def validate_server_header(header):
     """
     Process the contents of the HTTP Server: header. Try to see
     what version the server is running on. The tested versions
-    are kept in MYTHTV_VERSION_LIST  and checked agaings responses
+    are kept in MYTHTV_VERSION_LIST and checked against responses
     like:
 
         MythTV/29-pre-5-g6865940-dirty Linux/3.13.0-85-generic UPnP/1.0.
@@ -217,8 +217,9 @@ def send(host='', port=6544, endpoint='', postdata=None, rest='', opts=None):
 
               It's OK to call this function without any options set and:
 
-                  • No "Debug:..." messages will print from this function
+                  • No "Debug: ..." messages will print from this function
                   • If there's postdata, nothing will be sent to the server
+                  • timeout will be set to 10 seconds
                   • It will fail if the backend requires authorization (
                     user/pass would be required)
 
@@ -239,7 +240,7 @@ def send(host='', port=6544, endpoint='', postdata=None, rest='', opts=None):
                      uncompress it.
 
 
-    opts['timeout']: May be set, in seconds. Exmples: 5, 0.001. Used to prevent
+    opts['timeout']: May be set, in seconds. Examples: 5, 0.01. Used to prevent
                      script from waiting indefinitely for a reply from the
                      server. Note: a timeout exception is only raised if there
                      are no bytes received from the host on this socket. Long
@@ -259,7 +260,7 @@ def send(host='', port=6544, endpoint='', postdata=None, rest='', opts=None):
                      If opts['wrmi'] is False and there is postdata, *NOTHING*
                      is sent to the server.
 
-                     This is a failsafe that allows testing. Users can examine
+                     This is a fail-safe that allows testing. Users can examine
                      what's about to be sent before doing it (wrmi = We Really
                      Mean It.)
 
