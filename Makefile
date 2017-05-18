@@ -11,13 +11,13 @@ SOURCE = \
 usage:
 	@echo "\nUse: make install VERSION=M.m.f e.g VERSION=1.2.3\n"
 
-install: $(PACKAGE).egg-info/PKG-INFO
+$(PACKAGE).egg-info/PKG-INFO install:
 	@test -n "$(VERSION)"
 	@python2 setup.py bdist_wheel
 	@sudo -H pip2 install dist/$(PACKAGE)-$(VERSION)-py2-none-any.whl
 	@python3 setup.py bdist_wheel
 	@sudo -H pip3 install dist/$(PACKAGE)-$(VERSION)-py3-none-any.whl
-	@git commit -m "Add .whl files for $(VERSION)" dist/$(PACKAGE)-$(VERSION)-py?-none-any.whl
+	@git commit --all --message "Add .whl files for $(VERSION)" dist/$(PACKAGE)-$(VERSION)-py?-none-any.whl
 
 clean:
 	@rm -f  $(PACKAGE)/*.pyc
