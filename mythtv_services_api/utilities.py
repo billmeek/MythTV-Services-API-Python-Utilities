@@ -35,7 +35,7 @@ if sys.version_info[0] == 2:
 elif sys.version_info[0] == 3:
     from urllib.parse import quote
 
-from mythtv_services_api import send as s
+from mythtv_services_api import send as api
 from ._version import __version__
 
 REC_STATUS_CACHE = {}
@@ -134,7 +134,7 @@ def utc_to_local(utctime='', omityear=False):
     return (time_stamp + timedelta(seconds=utc_offset)).strftime(fromstring)
 
 
-def get_utc_offset(host=None, port=6544, opts=None):
+def get_utc_offset(backend=None, opts=None):
     """
     Get the backend's offset from UTC. Once retrieved, it's saved value is
     available in UTC_OFFSET and is returned too. Additional calls to this
@@ -147,8 +147,8 @@ def get_utc_offset(host=None, port=6544, opts=None):
 
     global UTC_OFFSET
 
-    if host is None:
-        print('get_utc_offset(): Error: host is empty.')
+    if backend is None:
+        print('get_utc_offset(): Error: backend not set.')
         return -1
 
     try:
@@ -156,8 +156,7 @@ def get_utc_offset(host=None, port=6544, opts=None):
         return UTC_OFFSET
     except (NameError, TypeError, ValueError):
 
-        resp_dict = s.send(host=host, port=port,
-                           endpoint='Myth/GetTimeZone', opts=opts)
+        resp_dict = backend.send(endpoint='Myth/GetTimeZone', opts=opts)
 
         if list(resp_dict.keys())[0] in ['Abort', 'Warning']:
             print('get_utc_offset(): {}'.format(resp_dict))
@@ -168,7 +167,7 @@ def get_utc_offset(host=None, port=6544, opts=None):
         return UTC_OFFSET
 
 
-def rec_status_to_string(host=None, port=6544, rec_status=0, opts=None):
+def rec_status_to_string(backend=None, rec_status=0, opts=None):
     """
     Convert a signed integer to a Recording Status String
      and cache the result.
@@ -176,22 +175,18 @@ def rec_status_to_string(host=None, port=6544, rec_status=0, opts=None):
     rec_status defaults to 0, which currently (29.0) means 'Unknown'
     """
 
-    if host is None:
-        print('rec_status_to_string(): Error: host is empty.')
+    if backend is None:
+        print('rec_status_to_string(): Error: backend not set.')
         return None
 
     try:
         str(REC_STATUS_CACHE[rec_status])
-        if opts['debug']:
-            print('Returning cached RecStatus of {}'
-                  .format(REC_STATUS_CACHE[rec_status]))
         return REC_STATUS_CACHE[rec_status]
     except (KeyError, NameError, ValueError):
         endpoint = 'Dvr/RecStatusToString'
         rest = 'RecStatus={}'.format(rec_status)
 
-        resp_dict = s.send(host=host, port=port, endpoint=endpoint,
-                           rest=rest, opts=opts)
+        resp_dict = backend.send(endpoint=endpoint, rest=rest, opts=opts)
 
         if list(resp_dict.keys())[0] in ['Abort', 'Warning']:
             print('rec_status_to_string(): {}'.format(resp_dict))
@@ -199,13 +194,10 @@ def rec_status_to_string(host=None, port=6544, rec_status=0, opts=None):
         else:
             REC_STATUS_CACHE[rec_status] = resp_dict['String']
 
-        if opts['debug']:
-            print('Returning new RecStatus of {}'
-                  .format(REC_STATUS_CACHE[rec_status]))
         return REC_STATUS_CACHE[rec_status]
 
 
-def rec_type_to_string(host=None, port=6544, rec_type=0, opts=None):
+def rec_type_to_string(backend=None, rec_type=0, opts=None):
     """
     Convert a signed integer to a Recording Type String and cache
     the result.
@@ -213,8 +205,8 @@ def rec_type_to_string(host=None, port=6544, rec_type=0, opts=None):
     rec_typedefaults to 0, which currently (29.0) means 'Not Recording'
     """
 
-    if host is None:
-        print('rec_type_to_string(): Error: host is empty.')
+    if backend is None:
+        print('rec_type_to_string(): Error: backend not set.')
         return None
 
     try:
@@ -224,8 +216,7 @@ def rec_type_to_string(host=None, port=6544, rec_type=0, opts=None):
         endpoint = 'Dvr/RecTypeToString'
         rest = 'RecType={}'.format(rec_type)
 
-        resp_dict = s.send(host=host, port=port, endpoint=endpoint,
-                           rest=rest, opts=opts)
+        resp_dict = backend.send(endpoint=endpoint, rest=rest, opts=opts)
 
         if list(resp_dict.keys())[0] in ['Abort', 'Warning']:
             print('rec_type_to_string(): {}'.format(resp_dict))
@@ -236,7 +227,7 @@ def rec_type_to_string(host=None, port=6544, rec_type=0, opts=None):
         return REC_TYPE_CACHE[rec_type]
 
 
-def dup_method_to_string(host=None, port=6544, dup_method=0, opts=None):
+def dup_method_to_string(backend=None, dup_method=0, opts=None):
     """
     Convert a signed integer to a Duplicate Method String and cache
     the result.
@@ -244,8 +235,8 @@ def dup_method_to_string(host=None, port=6544, dup_method=0, opts=None):
     dup_method defaults to 0, which currently (29.0) means 'No Search'
     """
 
-    if host is None:
-        print('dup_method_to_string(): Error: host is empty.')
+    if backend is None:
+        print('dup_method_to_string(): Error: backend not set.')
         return None
 
     try:
@@ -255,8 +246,7 @@ def dup_method_to_string(host=None, port=6544, dup_method=0, opts=None):
         endpoint = 'Dvr/DupMethodToString'
         rest = 'DupMethod={}'.format(dup_method)
 
-        resp_dict = s.send(host=host, port=port, endpoint=endpoint,
-                           rest=rest, opts=opts)
+        resp_dict = backend.send(endpoint=endpoint, rest=rest, opts=opts)
 
         if list(resp_dict.keys())[0] in ['Abort', 'Warning']:
             print('dup_method_to_string(): {}'.format(resp_dict))
