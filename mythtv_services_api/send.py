@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Basic access utilities."""
+"""API Client."""
 
 from __future__ import print_function
 from __future__ import absolute_import
@@ -9,6 +9,7 @@ from os import fdopen
 import re
 import sys
 import tempfile
+import logging
 
 try:
     import requests
@@ -17,9 +18,6 @@ except ImportError:
     sys.exit('Install python-requests or python3-requests')
 
 from ._version import __version__
-
-SERVER_VERSION = 'Set to MythTV version after calls to send()'
-SESSION = None
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
 # If MYTHTV_VERSION_LIST needs to be changed, be sure to     #
@@ -42,343 +40,413 @@ def _the_response_is_unexpected(response):
     return isinstance(response, dict)
 
 
-def _set_missing_opts(opts):
-    """Don't force the caller to set all of the options."""
+class Send(object):
+    """Services API."""
 
-    if not isinstance(opts, dict):
-        opts = {}
+    # pylint: disable=too-many-instance-attributes
+    def __init__(self, host, port=6544):
+        """
+        INPUT:
+        ======
 
-    for option in ('debug', 'noetag', 'nogzip', 'usexml', 'wrmi', 'wsdl'):
+        host:     Must be set and is the hostname or IP address of the backend
+                  or frontend.
+
+        port:     Only needed if the backend is using a different port
+                  (unlikely) or set to 6547 for frontend endpoints. Defaults
+                  to 6544.
+        """
+
+
+        self.host = host
+        self.port = port
+        self.endpoint = None
+        self.postdata = None
+        self.rest = None
+        self.opts = None
+        self.session = None
+        self.server_version = 'Set to MythTV version after calls to send()'
+        self.logger = logging.getLogger(__name__)
+
+        logging.getLogger(__name__).addHandler(logging.NullHandler())
+
+    # pylint: disable=too-many-locals,too-many-branches
+    # pylint: disable=too-many-return-statements
+    def send(self, endpoint='', postdata=None, rest='', opts=None):
+        """
+        Form a URL and send it to the back/frontend. Error handling is done
+        here too.
+
+        EXAMPLES:
+        =========
+
+        import mythtv_services_api.api as api
+        backend = api.Send(host='someName')
+
+        backend.send(endpoint='Myth/GetHostName')
+
+        Returns: {'String': 'someBackend'}
+
+        frontend = api.Send(host='someFrontend', port=6547)
+        frontend.send(endpoint='Frontend/GetStatus')
+
+        Returns: {'FrontendStatus': {'AudioTracks':...
+
+        INPUT:
+        ======
+
+        endpoint: Must be set. Example: Myth/GetHostName
+
+        postdata: May be set if the endpoint allows it. Used when information
+                  is added/changed/deleted. postdata is passed as a Python
+                  dict e.g. {'ChanId':1071, ...}. Don't use if rest is used.
+                  The HTTP method will be a POST (as opposed to a GET.)
+
+                  If using postdata, TAKE CAUTION!!! Use opts['wrmi']=False
+                  1st, turn on DEBUG level logging and then when happy with
+                  the data, make wrmi True.
+
+                  N.B. The MythTV Services API is still evolving and the wise
+                  user will backup their DB before including postdata.
+
+        rest:     May be set if the endpoint allows it. For example, endpoint=
+                  Myth/GetRecordedList, rest='Count=10&StorageGroup=Sports'
+                  Don't use if postdata is used. The HTTP method will be a GET.
+
+        opts (Short Description):
+
+        It's OK to call this function without any options set and:
+
+            • If there's postdata, nothing will be sent to the server
+            • timeout will be set to 10 seconds
+            • It will fail if the backend requires authorization (user/pass
+              would be required)
+
+        opts (Details):
+
+        opts is a dictionary of options that may be set in the calling program.
+        Default values will be used if callers don't pass all or some of their
+        own. The defaults are all False except for the user and pass.
+
+        opts['noetag']:  Don't request the back/frontend to check for matching
+                         ETag. Mostly for testing.
+
+        opts['nogzip']:  Don't request the back/frontend to gzip it's response.
+                         Useful if watching protocol with a tool that doesn't
+                         uncompress it.
+
+
+        opts['timeout']: May be set, in seconds. Examples: 5, 0.01. Used to
+                         prevent script from waiting indefinitely for a reply
+                         from the server. Note: a timeout exception is only
+                         raised if there are no bytes received from the host on
+                         this socket. Long downloads are not affected by this
+                         option. Defaults to 10 seconds.
+
+        opts['user']:    Digest authentication. Usually not turned on in the
+        opts['pass']:    backend.
+
+        opts['usexml']:  For testing only! If True, causes the backend to send
+                         its response in XML rather than JSON. This will force
+                         an error when parsing the response. Defaults to False.
+
+        opts['wrmi']:    If True and there is postdata, the URL is then sent to
+                         the server.
+
+                         If opts['wrmi'] is False and there is postdata, send
+                         NOTHING to the server.
+
+                         This is a fail-safe that allows testing. Users can
+                         examine what's about to be sent before doing it (wrmi
+                         means: We Really Mean It.)
+
+        opts['wsdl']:    If True return WSDL from the back/frontend. Accepts no
+                         rest or postdata. Just set endpoint, e.g. Content/wsdl
+
+        OUTPUT:
+        =======
+
+        Either the response from the server in the selected format (default is
+        JSON.) Or a dict with keys in one of: 'Abort', 'Warning', 'WSDL', or
+        'Image'.
+
+        Callers can handle the response like this:
+
+            response = api.send(...)
+
+            if list(response.keys())[0] in ['Abort', 'Warning']:
+                {print|sys.exit}('{}'.format(list(response.values())[0]))
+
+            normal processing...
+
+        If an 'Image' key is returned, then the caller is responsible for
+        deleting the temporary filename which is returned in its value e.g.
+
+            {'Image': '/tmp/tmp5pxynqdf.jpeg'}
+
+        However, some errors returned by the server are in XML, e.g. if an
+        endpoint is invalid. That will cause the JSON decoder to fail. In
+        the application calling this, turn logging on and use the DEBUG
+        level.
+
+        Whenever send() is used, 'server_version' is set to the value returned
+        by the back/frontend in the HTTP Server: header. It is saved as just
+        the version, e.g. 0.28. Callers can check it and *may* choose to adjust
+        their code work with other versions.
+
+        LOGGING:
+        ========
+        Callers may choose to use the Python logging module. Lines similar to
+        the following will make log() statements print if the level is set to
+        DEBUG:
+
+            import logging
+
+                logging.basicConfig(level=logging.DEBUG)
+                logger = logging.getLogger(__name__)
+                logging.basicConfig(level=logging.DEBUG
+                                    if opts else logging.INFO)
+                logging.getLogger('requests.packages.urllib3')
+                                  .setLevel(logging.WARNING)
+
+        """
+
+        self.endpoint = endpoint
+        self.postdata = postdata
+        self.rest = rest
+        self.opts = opts
+
+        self._set_missing_opts()
+
+        url = self._form_url()
+        if _the_response_is_unexpected(url):
+            return url
+
+        if self.session is None:
+            self._create_session()
+
+        opts_response = self._validate_opts(url)
+        if _the_response_is_unexpected(opts_response):
+            return opts_response
+
+        exceptions = (requests.exceptions.HTTPError,
+                      requests.exceptions.URLRequired,
+                      requests.exceptions.Timeout,
+                      requests.exceptions.ConnectionError,
+                      requests.exceptions.InvalidURL,
+                      KeyboardInterrupt)
+
+        ##############################################################
+        # Actually try to get the data and handle errors.            #
+        ##############################################################
+
         try:
-            opts[option]
-        except (KeyError, TypeError):
-            opts[option] = False
-
-    try:
-        opts['timeout']
-    except KeyError:
-        opts['timeout'] = 10
-
-    if opts['debug']:
-        print('Debug: opts={}'.format(opts))
-
-    return opts
-
-
-def _form_url(host, port, endpoint, postdata, rest):
-    """Basic sanity checks before making the URL."""
-
-    if host == '':
-        return {'Abort': 'No host name.'}
-
-    if endpoint == '':
-        return {'Abort': 'No endpoint (e.g. Myth/GetHostName.)'}
-
-    if postdata and rest:
-        return {'Abort': 'Use either postdata or rest.'}
-
-    if rest == '' or rest is None:
-        rest = ''
-    else:
-        rest = '?' + rest
-
-    return 'http://{}:{}/{}{}'.format(host, port, endpoint, rest)
-
-
-def _create_session(host, port, opts):
-    "If one doesn't already exist, then create a new session."""
-
-    global SESSION
-
-    SESSION = requests.Session()
-    SESSION.headers.update({'User-Agent': 'Python Services API Client v{}'
-                                          .format(__version__)})
-    if opts['noetag']:
-        SESSION.headers.update({'Cache-Control': 'no-store'})
-        SESSION.headers.update({'If-None-Match': ''})
-
-    if opts['nogzip']:
-        SESSION.headers.update({'Accept-Encoding': ''})
-    else:
-        SESSION.headers.update({'Accept-Encoding': 'gzip,deflate'})
-
-    if opts['usexml']:
-        SESSION.headers.update({'Accept': ''})
-    else:
-        SESSION.headers.update({'Accept': 'application/json'})
-
-    if opts['debug']:
-        print('Debug: New session')
-
-    # TODO: Problem with the BE not accepting postdata in the initial
-    # authorized query, Using a GET first as a workaround.
-
-    try:
-        if opts['user'] and opts['pass']:
-            SESSION.auth = HTTPDigestAuth(opts['user'], opts['pass'])
-            send(host=host, port=port, endpoint='Myth/version', opts=opts)
-    except KeyError:
-        # Proceed without authentication.
-        pass
-
-
-def _validate_opts(opts, postdata, rest, url):
-    """Return an Abort if the options don't make sense"""
-
-    if opts['debug']:
-        print('Debug: URL = {}'.format(url))
-        if postdata:
-            print('Debug: The following postdata was included:')
-            for key in postdata:
-                print('  {:30} {}'.format(key, postdata[key]))
-
-    if postdata and not opts['wrmi']:
-        return {'Warning': 'wrmi=False'}
-
-    if postdata and not isinstance(postdata, dict):
-        return {'Abort': 'usage: postdata must be passed as a dict'}
-
-    if opts['wsdl'] and (rest or postdata):
-        return {'Abort': 'usage: rest/postdata aren\'t allowed with WSDL'}
-
-
-def validate_server_header(header):
-    """
-    Process the contents of the HTTP Server: header. Try to see
-    what version the server is running on. The tested versions
-    are kept in MYTHTV_VERSION_LIST and checked against responses
-    like:
-
-        MythTV/29-pre-5-g6865940-dirty Linux/3.13.0-85-generic UPnP/1.0.
-        MythTV/28.0-10-g57c1afb Linux/4.4.0-21-generic UPnP/1.0.
-        Linux 3.13.0-65-generic, UPnP/1.0, MythTV 0.27.20150622-1
-    """
-
-    global SERVER_VERSION
-
-    if header is None:
-        return {'Abort': 'No HTTP "Server:" header returned.'}
-
-    for version in MYTHTV_VERSION_LIST:
-        if re.search(version, header):
-            SERVER_VERSION = version
-            return
-
-    return {'Abort': 'Tested on {}, not: {}.'.format(MYTHTV_VERSION_LIST,
-                                                     header)}
-
-# pylint: disable=too-many-arguments,too-many-locals
-# pylint: disable=too-many-return-statements,too-many-branches
-def send(host='', port=6544, endpoint='', postdata=None, rest='', opts=None):
-    """
-    Form a URL and send it to the back/frontend. Error handling is done
-    here too.
-
-    Examples:
-    =========
-
-    from mythtv_services_api import send as api
-
-    api.send(host='someHostName', endpoint='Myth/GetHostName')
-    Returns:
-    {'String': 'someBackend'}
-
-    api.send(host='someFrontend', port=6547, endpoint='Frontend/GetStatus')
-    Returns:
-    {'FrontendStatus': {'AudioTracks':...
-
-    Input:
-    ======
-
-    host:     Must be set and is the hostname or IP of the back/frontend.
-
-    port:     Only needed if the backend is using a different port (unlikely)
-              or set to 6547 for frontend endpoints. Defaults to 6544.
-
-    endpoint: Must be set. Example: Myth/GetHostName
-
-    postdata: May be set if the endpoint allows it. Used when information is
-              to be added/changed/deleted. postdata is passed as a Python dict
-              e.g. {'ChanId':1071, ...}. Don't use if rest is used. The HTTP
-              method will be a POST (as opposed to a GET.)
-
-              If using postdata, TAKE EXTREME CAUTION!!! Use opts['wrmi']=False
-              1st, set opts['debug']=True and watch what's sent. When happy
-              with the data, make wrmi True.
-
-              N.B. The MythTV Services API is still evolving and the wise user
-              will backup their DB before including postdata.
-
-    rest:     May be set if the endpoint allows it. For example, endpoint=
-              Myth/GetRecordedList, rest='Count=10&StorageGroup=Sports'
-              Don't use if postdata is used. The HTTP method will be a GET.
-
-    opts      SHORT DESCRIPTION:
-
-              It's OK to call this function without any options set and:
-
-                  • No "Debug: ..." messages will print from this function
-                  • If there's postdata, nothing will be sent to the server
-                  • timeout will be set to 10 seconds
-                  • It will fail if the backend requires authorization (
-                    user/pass would be required)
-
-    DETAILS:
-
-    opts is a dictionary of options that may be set in the calling program.
-    Default values will be used if callers don't pass all or some of their
-    own. The defaults are all False except for the user and pass.
-
-    opts['debug']:   Set to True and some informational messages will be
-                     printed.
-
-    opts['noetag']:  Don't request the back/frontend to check for a matching
-                     ETag. Mostly for testing.
-
-    opts['nogzip']:  Don't request the back/frontend to gzip it's response.
-                     Useful if watching protocol with a tool that doesn't
-                     uncompress it.
-
-
-    opts['timeout']: May be set, in seconds. Examples: 5, 0.01. Used to prevent
-                     script from waiting indefinitely for a reply from the
-                     server. Note: a timeout exception is only raised if there
-                     are no bytes received from the host on this socket. Long
-                     downloads are not affected by this option. Defaults to 10
-                     seconds.
-
-    opts['user']:    Digest authentication. Usually not turned on in the
-    opts['pass']:    backend.
-
-    opts['usexml']:  For testing only! If True, causes the backend to send its
-                     response in XML rather than JSON. This will force an error
-                     when parsing the response. Defaults to False.
-
-    opts['wrmi']:    If True and there is postdata, the URL is actually sent
-                     to the server.
-
-                     If opts['wrmi'] is False and there is postdata, *NOTHING*
-                     is sent to the server.
-
-                     This is a fail-safe that allows testing. Users can examine
-                     what's about to be sent before doing it (wrmi = We Really
-                     Mean It.)
-
-    opts['wsdl']:    If True return WSDL from the back/frontend. Accepts no
-                     rest or postdata. Just set endpoint, e.g. Content/wsdl
-
-    Output:
-    ======
-
-    Either the response from the server in the selected format (default is
-    JSON.) Or a dict with keys in one of: 'Abort', 'Warning', 'WSDL', or
-    'Image'.
-
-    Callers can handle the response like this:
-
-        response = api.send(...)
-
-        if list(response.keys())[0] in ['Abort', 'Warning']:
-            {print|sys.exit}('{}'.format(list(response.values())[0]))
-
-        normal processing...
-
-    If an 'Image' key is returned, then the caller is responsible for deleting
-    the temporary filename which is returned in its value e.g.
-
-        {'Image': '/tmp/tmp5pxynqdf.jpeg'}
-
-    However, some errors returned by the server are in XML, e.g. if an
-    endpoint is invalid. That will cause the JSON decoder to fail. Use
-    the debug opt to view the failing response.
-
-    Whenever send() is used, the global 'SERVER_VERSION' is set to the value
-    returned by the back/frontend in the HTTP Server: header. It is saved as
-    just the version, e.g. 0.28. Callers can check it and *may* choose to
-    adjust their code work with other versions.
-
-    """
-
-    opts = _set_missing_opts(opts)
-
-    url = _form_url(host, port, endpoint, postdata, rest)
-    if _the_response_is_unexpected(url):
-        return url
-
-    if not SESSION:
-        _create_session(host, port, opts)
-
-    opts_response = _validate_opts(opts, postdata, rest, url)
-    if _the_response_is_unexpected(opts_response):
-        return opts_response
-
-    exceptions = (requests.exceptions.HTTPError,
-                  requests.exceptions.URLRequired,
-                  requests.exceptions.Timeout,
-                  requests.exceptions.ConnectionError,
-                  requests.exceptions.InvalidURL,
-                  KeyboardInterrupt)
-
-    ##############################################################
-    # Actually try to get the data and handle errors.            #
-    ##############################################################
-
-    try:
-        if postdata:
-            response = SESSION.post(url, data=postdata, timeout=opts['timeout'])
+            if self.postdata:
+                response = self.session.post(url, data=self.postdata,
+                                             timeout=self.opts['timeout'])
+            else:
+                response = self.session.get(url, timeout=self.opts['timeout'])
+        except exceptions:
+            return {'Abort': 'Connection problem or Keyboard Interrupt, URL={}'
+                             .format(url)}
+
+        if response.status_code == 401:
+            return {'Abort': 'Unauthorized (401). Need valid user/password.'}
+
+        # TODO: Should handle redirects here:
+        if response.status_code > 299:
+            return {'Abort': 'Unexpected status returned: {}: URL was: {}'
+                             .format(response.status_code, url)}
+
+        server_header = self._validate_header(response.headers['Server'])
+
+        if _the_response_is_unexpected(server_header):
+            return server_header
+
+        try:
+            header, image_type = response.headers['Content-Type'].split('/')
+        except (KeyError, ValueError):
+            header = None
+
+        ##############################################################
+        # Finally, return the response in the desired format         #
+        ##############################################################
+
+        if self.opts['wsdl']:
+            return {'WSDL': response.text}
+
+        if not header:
+            try:
+                self.log('1st 60 bytes of response: {}'
+                         .format(response.text[:60]))
+            except UnicodeEncodeError:
+                pass
+
+        if header == 'image':
+            handle, filename = tempfile.mkstemp(suffix='.' + image_type)
+            self.log('created {}, remember to delete it.' .format(filename))
+            with fdopen(handle, 'wb') as f_obj:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f_obj.write(chunk)
+            return {'Image': filename}
+
+        if self.opts['usexml']:
+            return response.text
+
+        try:
+            return response.json()
+        except ValueError as err:
+            return {'Abort': 'Set loglevel=DEBUG to see JSON parsing error: {}'
+                             .format(err)}
+
+    def log(self, message):
+        """Log a message. Only here to shorten self.logger.debug() calls."""
+        self.logger.debug('%s', message)
+
+    def _set_missing_opts(self):
+        """
+        Sets options not set by the caller to False (or 10 in the
+        case of timeout.
+        """
+
+        if not isinstance(self.opts, dict):
+            self.opts = {}
+
+        for option in ('noetag', 'nogzip', 'usexml', 'wrmi', 'wsdl'):
+            try:
+                self.opts[option]
+            except (KeyError, TypeError):
+                self.opts[option] = False
+
+        try:
+            self.opts['timeout']
+        except KeyError:
+            self.opts['timeout'] = 10
+
+        self.log('opts={}'.format(self.opts))
+
+        return
+
+    def _form_url(self):
+        """Do basic sanity checks and then form the URL."""
+
+        if self.host == '':
+            return {'Abort': 'No host name.'}
+
+        if self.endpoint == '':
+            return {'Abort': 'No endpoint (e.g. Myth/GetHostName.)'}
+
+        if self.postdata and self.rest:
+            return {'Abort': 'Use either postdata or rest.'}
+
+        if self.rest == '' or self.rest is None:
+            self.rest = ''
         else:
-            response = SESSION.get(url, timeout=opts['timeout'])
-    except exceptions:
-        return {'Abort': 'Connection problem or Keyboard Interrupt, URL={}'
-                         .format(url)}
+            self.rest = '?' + self.rest
 
-    if response.status_code == 401:
-        return {'Abort': 'Unauthorized (401) error. Need valid user/password.'}
+        return 'http://{}:{}/{}{}'.format(self.host, self.port, self.endpoint,
+                                          self.rest)
 
-    # TODO: Should handle redirects here:
-    if response.status_code > 299:
-        return {'Abort': 'Unexpected status returned: {}: URL was: {}'.format(
-            response.status_code, url)}
+    def _validate_opts(self, url):
+        """Return an Abort if the options don't make sense"""
 
-    server_header = validate_server_header(response.headers['Server'])
+        self.log('URL = {}'.format(url))
+        if self.postdata:
+            self.log('The following postdata was included:')
+            for key in self.postdata:
+                self.log('  {:30} {}'.format(key, self.postdata[key]))
 
-    if _the_response_is_unexpected(server_header):
-        return server_header
+        if self.postdata and not self.opts['wrmi']:
+            return {'Warning': 'wrmi=False'}
 
-    try:
-        header, image_type = response.headers['Content-Type'].split('/')
-    except (KeyError, ValueError):
-        header = None
+        if self.postdata and not isinstance(self.postdata, dict):
+            return {'Abort': 'usage: postdata must be passed as a dict'}
 
-    ##############################################################
-    # Finally, return the response in the desired format         #
-    ##############################################################
+        if self.opts['wsdl'] and (self.rest or self.postdata):
+            return {'Abort': 'usage: rest/postdata aren\'t allowed with WSDL'}
 
-    if opts['wsdl']:
-        return {'WSDL': response.text}
+    def _create_session(self):
+        """
+        Called if a session doesn't already exist. Sets the desired
+        headers and provides for authentication.
+        """
 
-    if opts['debug'] and not header:
+        self.session = requests.Session()
+        self.session.headers.update({'User-Agent': 'Python Services API v{}'
+                                                   .format(__version__)})
+        if self.opts['noetag']:
+            self.session.headers.update({'Cache-Control': 'no-store'})
+            self.session.headers.update({'If-None-Match': ''})
+
+        if self.opts['nogzip']:
+            self.session.headers.update({'Accept-Encoding': ''})
+        else:
+            self.session.headers.update({'Accept-Encoding': 'gzip,deflate'})
+
+        if self.opts['usexml']:
+            self.session.headers.update({'Accept': ''})
+        else:
+            self.session.headers.update({'Accept': 'application/json'})
+
+        self.log('New session')
+
+        # TODO: Problem with the BE not accepting postdata in the initial
+        # authorized query, Using a GET first as a workaround.
+
         try:
-            print('Debug: 1st 60 bytes of response: {}'
-                  .format(response.text[:60]))
-        except UnicodeEncodeError:
+            if self.opts['user'] and self.opts['pass']:
+                self.session.auth = HTTPDigestAuth(self.opts['user'],
+                                                   self.opts['pass'])
+                self.send()
+        except KeyError:
+            # Proceed without authentication.
             pass
 
-    if header == 'image':
-        handle, filename = tempfile.mkstemp(suffix='.' + image_type)
-        if opts['debug']:
-            print('Debug: created {}, remember to delete it.'.format(filename))
-        with fdopen(handle, 'wb') as f_obj:
-            for chunk in response.iter_content(chunk_size=8192):
-                f_obj.write(chunk)
-        return {'Image': filename}
+    def _validate_header(self, header):
+        """
+        Process the contents of the HTTP Server: header. Try to see
+        what version the server is running on. The tested versions
+        are kept in MYTHTV_VERSION_LIST and checked against responses
+        like:
 
-    if opts['usexml']:
-        return response.text
+            MythTV/29-pre-5-g6865940-dirty Linux/3.13.0-85-generic UPnP/1.0.
+            MythTV/28.0-10-g57c1afb Linux/4.4.0-21-generic UPnP/1.0.
+            Linux 3.13.0-65-generic, UPnP/1.0, MythTV 0.27.20150622-1
+        """
 
-    try:
-        return response.json()
-    except ValueError as err:
-        return {'Abort': 'Set debug to see JSON parsing error: {}'.format(err)}
+        if header is None:
+            return {'Abort': 'No HTTP "Server from host {}:" header returned.'
+                             .format(self.host)}
+
+        for version in MYTHTV_VERSION_LIST:
+            if re.search(version, header):
+                self.server_version = version
+                return
+
+        return {'Abort': 'Tested on {}, not: {}.'.format(MYTHTV_VERSION_LIST,
+                                                         header)}
+
+    @property
+    def get_server_version(self):
+        """
+        Returns the version of the back/frontend. Only works if send() has
+        been called.
+        """
+        return self.server_version
+
+    @property
+    def get_opts(self):
+        """
+        Returns the all opts{}, whether set manually or automatically.
+        been called.
+        """
+        return self.opts
+
+    @property
+    def get_headers(self):
+        """
+        Returns the the current headers.
+        """
+        return self.session.headers
 
 # vim: set expandtab tabstop=4 shiftwidth=4 smartindent noai colorcolumn=80:
