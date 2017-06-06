@@ -1,5 +1,5 @@
-.pylintrc
 *.pyc
+*.swp
 push.sh
 remote_pkg.sh
 build/

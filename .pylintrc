@@ -1,0 +1,26 @@
+# Custom .pylintrc file for mythtv_services_api. Use pylint --reports=y
+# to see the reports.
+
+[REPORTS]
+# Set the output format to colorized.
+output-format=colorized
+
+# This is used by the global evaluation report (RP0004).
+evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10)
+
+[FORMAT]
+# Changed from 80 so that pep8 lengths will be flagged.
+max-line-length=79
+
+[DESIGN]
+# Maximum number of locals for function / method body.
+max-locals=20
+
+# Maximum number of return / yield for function / method body.
+max-returns=16
+
+# Maximum number of branch for function / method body.
+max-branches=20
+
+# Maximum number of attributes for a class (see R0902).
+max-attributes=10

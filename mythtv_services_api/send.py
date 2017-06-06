@@ -43,7 +43,6 @@ def _the_response_is_unexpected(response):
 class Send(object):
     """Services API."""
 
-    # pylint: disable=too-many-instance-attributes
     def __init__(self, host, port=6544):
         """
         INPUT:
@@ -70,8 +69,6 @@ class Send(object):
 
         logging.getLogger(__name__).addHandler(logging.NullHandler())
 
-    # pylint: disable=too-many-locals,too-many-branches
-    # pylint: disable=too-many-return-statements
     def send(self, endpoint='', postdata=None, rest='', opts=None):
         """
         Form a URL and send it to the back/frontend. Error handling is done
@@ -439,7 +436,7 @@ class Send(object):
     @property
     def get_opts(self):
         """
-        Returns the all opts{}, whether set manually or automatically.
+        Returns the all opts{}, whether set manually or automatically
         been called.
         """
         return self.opts
@@ -447,7 +444,7 @@ class Send(object):
     @property
     def get_headers(self):
         """
-        Returns the the current headers.
+        Returns the current headers.
         """
         return self.session.headers
 
