@@ -228,7 +228,7 @@ class Send(object):
         if self.session is None:
             self._create_session()
 
-        opts_response = self._validate_opts(url)
+        opts_response = self._validate_opts()
         if _the_response_is_unexpected(opts_response):
             return opts_response
 
