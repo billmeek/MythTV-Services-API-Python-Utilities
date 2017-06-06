@@ -17,7 +17,7 @@ $(PACKAGE).egg-info/PKG-INFO install:
 	@sudo -H pip2 install dist/$(PACKAGE)-$(VERSION)-py2-none-any.whl
 	@python3 setup.py bdist_wheel
 	@sudo -H pip3 install dist/$(PACKAGE)-$(VERSION)-py3-none-any.whl
-	@git add dist/mythtv_services_api-0.0.8-py?-none-any.whl
+	@git add dist/mythtv_services_api-$(VERSION)-py?-none-any.whl
 	@git commit --message "Add .whl files for $(VERSION)" dist/$(PACKAGE)-$(VERSION)-py?-none-any.whl
 
 clean:
