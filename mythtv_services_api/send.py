@@ -219,6 +219,9 @@ class Send(object):
         self._set_missing_opts()
 
         url = self._form_url()
+
+        self.log('URL={}'.format(url))
+
         if _the_response_is_unexpected(url):
             return url
 
@@ -347,10 +350,9 @@ class Send(object):
         return 'http://{}:{}/{}{}'.format(self.host, self.port, self.endpoint,
                                           self.rest)
 
-    def _validate_opts(self, url):
+    def _validate_opts(self):
         """Return an Abort if the options don't make sense"""
 
-        self.log('URL = {}'.format(url))
         if self.postdata:
             self.log('The following postdata was included:')
             for key in self.postdata:
