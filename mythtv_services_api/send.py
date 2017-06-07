@@ -123,7 +123,8 @@ class Send(object):
 
         opts is a dictionary of options that may be set in the calling program.
         Default values will be used if callers don't pass all or some of their
-        own. The defaults are all False except for the user and pass.
+        own. The defaults are all False except for 'user', 'pass' and
+        'timeout'.
 
         opts['noetag']:  Don't request the back/frontend to check for matching
                          ETag. Mostly for testing.
@@ -169,7 +170,8 @@ class Send(object):
 
         Callers can handle the response like this:
 
-            response = api.send(...)
+            backend = api.Send(host=...)
+            response = backend.send(...)
 
             if list(response.keys())[0] in ['Abort', 'Warning']:
                 {print|sys.exit}('{}'.format(list(response.values())[0]))
@@ -184,12 +186,12 @@ class Send(object):
         However, some errors returned by the server are in XML, e.g. if an
         endpoint is invalid. That will cause the JSON decoder to fail. In
         the application calling this, turn logging on and use the DEBUG
-        level.
+        level. See the next section.
 
         Whenever send() is used, 'server_version' is set to the value returned
         by the back/frontend in the HTTP Server: header. It is saved as just
         the version, e.g. 0.28. Callers can check it and *may* choose to adjust
-        their code work with other versions.
+        their code work with other versions. See: get_server_version().
 
         LOGGING:
         ========
@@ -199,10 +201,9 @@ class Send(object):
 
             import logging
 
-                logging.basicConfig(level=logging.DEBUG)
                 logger = logging.getLogger(__name__)
                 logging.basicConfig(level=logging.DEBUG
-                                    if opts else logging.INFO)
+                                    if args['debug'] else logging.INFO)
                 logging.getLogger('requests.packages.urllib3')
                                   .setLevel(logging.WARNING)
 
@@ -217,7 +218,7 @@ class Send(object):
 
         url = self._form_url()
 
-        self.log('URL={}'.format(url))
+        self._log('URL={}'.format(url))
 
         if _the_response_is_unexpected(url):
             return url
@@ -225,7 +226,7 @@ class Send(object):
         if self.session is None:
             self._create_session()
 
-        opts_response = self._validate_opts()
+        opts_response = self._validate_postdata()
         if _the_response_is_unexpected(opts_response):
             return opts_response
 
@@ -253,7 +254,7 @@ class Send(object):
         if response.status_code == 401:
             return {'Abort': 'Unauthorized (401). Need valid user/password.'}
 
-        # TODO: Should handle redirects here:
+        # TODO: Should handle redirects here (mostly for remote backends.)
         if response.status_code > 299:
             return {'Abort': 'Unexpected status returned: {}: URL was: {}'
                              .format(response.status_code, url)}
@@ -264,9 +265,9 @@ class Send(object):
             return server_header
 
         try:
-            header, image_type = response.headers['Content-Type'].split('/')
+            ct_header, image_type = response.headers['Content-Type'].split('/')
         except (KeyError, ValueError):
-            header = None
+            ct_header = None
 
         ##############################################################
         # Finally, return the response in the desired format         #
@@ -275,16 +276,16 @@ class Send(object):
         if self.opts['wsdl']:
             return {'WSDL': response.text}
 
-        if not header:
+        if not ct_header:
             try:
-                self.log('1st 60 bytes of response: {}'
-                         .format(response.text[:60]))
+                self._log('1st 60 bytes of response: {}'
+                          .format(response.text[:60]))
             except UnicodeEncodeError:
                 pass
 
-        if header == 'image':
+        if ct_header == 'image':
             handle, filename = tempfile.mkstemp(suffix='.' + image_type)
-            self.log('created {}, remember to delete it.' .format(filename))
+            self._log('created {}, remember to delete it.' .format(filename))
             with fdopen(handle, 'wb') as f_obj:
                 for chunk in response.iter_content(chunk_size=8192):
                     f_obj.write(chunk)
@@ -299,7 +300,7 @@ class Send(object):
             return {'Abort': 'Set loglevel=DEBUG to see JSON parsing error: {}'
                              .format(err)}
 
-    def log(self, message):
+    def _log(self, message):
         """Log a message. Only here to shorten self.logger.debug() calls."""
         self.logger.debug('%s', message)
 
@@ -323,7 +324,7 @@ class Send(object):
         except KeyError:
             self.opts['timeout'] = 10
 
-        self.log('opts={}'.format(self.opts))
+        self._log('opts={}'.format(self.opts))
 
         return
 
@@ -347,19 +348,19 @@ class Send(object):
         return 'http://{}:{}/{}{}'.format(self.host, self.port, self.endpoint,
                                           self.rest)
 
-    def _validate_opts(self):
-        """Return an Abort if the options don't make sense"""
-
-        if self.postdata:
-            self.log('The following postdata was included:')
-            for key in self.postdata:
-                self.log('  {:30} {}'.format(key, self.postdata[key]))
-
-        if self.postdata and not self.opts['wrmi']:
-            return {'Warning': 'wrmi=False'}
+    def _validate_postdata(self):
+        """Return an Abort if the postdata passed doesn't make sense"""
 
         if self.postdata and not isinstance(self.postdata, dict):
             return {'Abort': 'usage: postdata must be passed as a dict'}
+
+        if self.postdata:
+            self._log('The following postdata was included:')
+            for key in self.postdata:
+                self._log('  {:30} {}'.format(key, self.postdata[key]))
+
+        if self.postdata and not self.opts['wrmi']:
+            return {'Warning': 'wrmi=False'}
 
         if self.opts['wsdl'] and (self.rest or self.postdata):
             return {'Abort': 'usage: rest/postdata aren\'t allowed with WSDL'}
@@ -387,7 +388,7 @@ class Send(object):
         else:
             self.session.headers.update({'Accept': 'application/json'})
 
-        self.log('New session')
+        self._log('New session')
 
         # TODO: Problem with the BE not accepting postdata in the initial
         # authorized query, Using a GET first as a workaround.

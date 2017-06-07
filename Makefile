@@ -18,7 +18,7 @@ $(PACKAGE).egg-info/PKG-INFO install:
 	@python3 setup.py bdist_wheel
 	@sudo -H pip3 install dist/$(PACKAGE)-$(VERSION)-py3-none-any.whl
 	@git add dist/mythtv_services_api-$(VERSION)-py?-none-any.whl
-	@git commit --message "Add .whl files for $(VERSION)" dist/$(PACKAGE)-$(VERSION)-py?-none-any.whl
+	@git commit --message "Latest .whls for $(VERSION)" dist/$(PACKAGE)-$(VERSION)-py?-none-any.whl
 
 clean:
 	@rm -f  $(PACKAGE)/*.pyc
@@ -29,6 +29,6 @@ clean:
 clobber: clean
 	@git rm -f dist/$(PACKAGE)-$(VERSION)-py?-none-any.whl
 
-uninstall:
+uninstall: clobber
 	sudo -H pip2 uninstall $(PACKAGE)
 	sudo -H pip3 uninstall $(PACKAGE)
