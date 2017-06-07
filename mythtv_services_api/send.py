@@ -226,9 +226,9 @@ class Send(object):
         if self.session is None:
             self._create_session()
 
-        opts_response = self._validate_postdata()
-        if _the_response_is_unexpected(opts_response):
-            return opts_response
+        pd_response = self._validate_postdata()
+        if _the_response_is_unexpected(pd_response):
+            return pd_response
 
         exceptions = (requests.exceptions.HTTPError,
                       requests.exceptions.URLRequired,
@@ -397,7 +397,15 @@ class Send(object):
             if self.opts['user'] and self.opts['pass']:
                 self.session.auth = HTTPDigestAuth(self.opts['user'],
                                                    self.opts['pass'])
+                saved_ep = self.endpoint
+                saved_pd = self.postdata
+                saved_re = self.rest
+                saved_op = self.opts
                 self.send(endpoint='Myth/version')
+                self.endpoint = saved_ep
+                self.postdata = saved_pd
+                self.rest = saved_re
+                self.opts = saved_op
         except KeyError:
             # Proceed without authentication.
             pass
