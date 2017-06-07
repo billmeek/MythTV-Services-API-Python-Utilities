@@ -226,9 +226,10 @@ class Send(object):
         if self.session is None:
             self._create_session()
 
-        pd_response = self._validate_postdata()
-        if _the_response_is_unexpected(pd_response):
-            return pd_response
+        if self.postdata:
+            pd_response = self._validate_postdata()
+            if _the_response_is_unexpected(pd_response):
+                return pd_response
 
         exceptions = (requests.exceptions.HTTPError,
                       requests.exceptions.URLRequired,
@@ -391,21 +392,23 @@ class Send(object):
         self._log('New session')
 
         # TODO: Problem with the BE not accepting postdata in the initial
-        # authorized query, Using a GET first as a workaround.
+        # authorized query, Using a GET first as a workaround. The stack
+        # thing is really ugly, must be a better solution.
 
         try:
             if self.opts['user'] and self.opts['pass']:
                 self.session.auth = HTTPDigestAuth(self.opts['user'],
                                                    self.opts['pass'])
-                saved_ep = self.endpoint
-                saved_pd = self.postdata
-                saved_re = self.rest
-                saved_op = self.opts
+                stack = []
+                stack.append(self.endpoint)
+                stack.append(self.postdata)
+                stack.append(self.rest)
+                stack.append(self.opts)
                 self.send(endpoint='Myth/version')
-                self.endpoint = saved_ep
-                self.postdata = saved_pd
-                self.rest = saved_re
-                self.opts = saved_op
+                self.opts = stack.pop()
+                self.rest = stack.pop()
+                self.postdata = stack.pop()
+                self.endpoint = stack.pop()
         except KeyError:
             # Proceed without authentication.
             pass
