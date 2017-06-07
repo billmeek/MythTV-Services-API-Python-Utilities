@@ -397,7 +397,7 @@ class Send(object):
             if self.opts['user'] and self.opts['pass']:
                 self.session.auth = HTTPDigestAuth(self.opts['user'],
                                                    self.opts['pass'])
-                self.send()
+                self.send(endpoint='Myth/version')
         except KeyError:
             # Proceed without authentication.
             pass
