@@ -78,8 +78,11 @@ def create_find_time(time=''):
     Input:  Full UTC timestamp, e.g. 2014-08-12T22:00:00 (with or without
             the trailing 'Z'.)
 
-    Output: Time portion of the above in local time.
+    Output: Time portion of the above in local time. Or -1 for invalid
+            timestamp input.
     """
+
+    time_format = '%Y-%m-%dT%H:%M:%S'
 
     if time is None or time == '':
         print('Warning: create_find_time called without any time')
@@ -89,12 +92,17 @@ def create_find_time(time=''):
         int(UTC_OFFSET)
         utc_offset = UTC_OFFSET
     except (NameError, TypeError, ValueError):
-        print('Warning: Run get_utc_offset() first. using UTC offset of 0.')
+        print('Warning: Run get_utc_offset() first. Using UTC offset of 0.')
         utc_offset = 0
 
     time = time.replace('Z', '')
 
-    time_stamp = datetime.strptime(time, '%Y-%m-%dT%H:%M:%S')
+    try:
+        time_stamp = datetime.strptime(time, time_format)
+    except (NameError, TypeError, ValueError):
+        print('Error: Invalid timestamp: {}, required: {}.'
+              .format(time, time_format))
+        return -1
 
     return (time_stamp + timedelta(seconds=utc_offset)).strftime('%H:%M:%S')
 
