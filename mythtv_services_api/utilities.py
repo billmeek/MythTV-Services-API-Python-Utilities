@@ -81,7 +81,7 @@ def create_find_time(time=''):
     Output: Time portion of the above in local time.
     """
 
-    if time == '':
+    if time is None or time == '':
         print('Warning: create_find_time called without any time')
         return None
 
@@ -150,7 +150,7 @@ def get_utc_offset(backend=None):
 
     global UTC_OFFSET
 
-    if backend is None:
+    if backend is None or backend == '':
         print('get_utc_offset(): Error: backend not set.')
         return -1
 
