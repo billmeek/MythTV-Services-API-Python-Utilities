@@ -26,7 +26,7 @@ max-locals=20
 max-returns=16
 
 # Maximum number of branch for function / method body. WAS: 12
-max-branches=20
+max-branches=25
 
 # Maximum number of attributes for a class (see R0902). WAS: 7
 max-attributes=10

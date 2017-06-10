@@ -29,13 +29,15 @@ from __future__ import absolute_import
 from datetime import datetime, timedelta
 import sys
 
+# pylint: disable=no-name-in-module, import-error
 if sys.version_info[0] == 2:
     from urllib import quote
-
 elif sys.version_info[0] == 3:
     from urllib.parse import quote
+else:
+    sys.exit('Unable to import urllib')
+# pylint: enable=no-name-in-module, import-error
 
-from mythtv_services_api import send as api
 from ._version import __version__
 
 REC_STATUS_CACHE = {}
@@ -79,8 +81,6 @@ def create_find_time(time=''):
     Output: Time portion of the above in local time.
     """
 
-    # TODO: remove and just use utc_to_local with omityear=True?
-
     if time == '':
         print('Warning: create_find_time called without any time')
         return None
@@ -119,12 +119,15 @@ def utc_to_local(utctime='', omityear=False):
         print('Warning: Run get_utc_offset() first, using UTC offset of 0.')
         utc_offset = 0
 
-    if utctime == '':
+    if utctime is None or utctime == '':
         return 'Error: utc_to_local(): utctime is empty!'
 
     utctime = utctime.replace('Z', '').replace('T', ' ')
 
-    time_stamp = datetime.strptime(utctime, '%Y-%m-%d %H:%M:%S')
+    try:
+        time_stamp = datetime.strptime(utctime, '%Y-%m-%d %H:%M:%S')
+    except ValueError:
+        return 'Error: utc_to_local(): bad timestamp format!'
 
     if omityear:
         fromstring = '%m-%d %H:%M:%S'
@@ -134,13 +137,13 @@ def utc_to_local(utctime='', omityear=False):
     return (time_stamp + timedelta(seconds=utc_offset)).strftime(fromstring)
 
 
-def get_utc_offset(backend=None, opts=None):
+def get_utc_offset(backend=None):
     """
     Get the backend's offset from UTC. Once retrieved, it's saved value is
     available in UTC_OFFSET and is returned too. Additional calls to this
     function aren't necessary, but if made, won't query the backend again.
 
-    Input:  host, optional port/opts.
+    Input:  backend object, optional port/opts.
 
     Output: The offset (in seconds) or -1 and a message prints
     """
@@ -156,7 +159,7 @@ def get_utc_offset(backend=None, opts=None):
         return UTC_OFFSET
     except (NameError, TypeError, ValueError):
 
-        resp_dict = backend.send(endpoint='Myth/GetTimeZone', opts=opts)
+        resp_dict = backend.send(endpoint='Myth/GetTimeZone', opts=None)
 
         if list(resp_dict.keys())[0] in ['Abort', 'Warning']:
             print('get_utc_offset(): {}'.format(resp_dict))
@@ -175,7 +178,7 @@ def rec_status_to_string(backend=None, rec_status=0, opts=None):
     rec_status defaults to 0, which currently (29.0) means 'Unknown'
     """
 
-    if backend is None:
+    if backend is None or backend == '':
         print('rec_status_to_string(): Error: backend not set.')
         return None
 
@@ -205,7 +208,7 @@ def rec_type_to_string(backend=None, rec_type=0, opts=None):
     rec_typedefaults to 0, which currently (29.0) means 'Not Recording'
     """
 
-    if backend is None:
+    if backend is None or backend == '':
         print('rec_type_to_string(): Error: backend not set.')
         return None
 
@@ -235,7 +238,7 @@ def dup_method_to_string(backend=None, dup_method=0, opts=None):
     dup_method defaults to 0, which currently (29.0) means 'No Search'
     """
 
-    if backend is None:
+    if backend is None or backend is '':
         print('dup_method_to_string(): Error: backend not set.')
         return None
 
@@ -256,8 +259,4 @@ def dup_method_to_string(backend=None, dup_method=0, opts=None):
 
         return DUP_METHOD_CACHE[dup_method]
 
-# :!pylint --output-format=colorized % | less
-# :!./make2 && ./make3
-# :!./make2 && ./make3 && unitTestForUtilities.py 2>&1 | less
-# :!unitTestForUtilities.py | less
 # vim: set expandtab tabstop=4 shiftwidth=4 smartindent noai colorcolumn=80:
