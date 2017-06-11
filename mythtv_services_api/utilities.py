@@ -27,6 +27,7 @@
 from __future__ import print_function
 from __future__ import absolute_import
 from datetime import datetime, timedelta
+import logging
 import sys
 
 # pylint: disable=no-name-in-module, import-error
@@ -44,6 +45,9 @@ REC_STATUS_CACHE = {}
 REC_TYPE_CACHE = {}
 DUP_METHOD_CACHE = {}
 UTC_OFFSET = None
+
+LOG = logging.getLogger(__name__)
+logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
 def url_encode(value=None):
@@ -63,7 +67,7 @@ def url_encode(value=None):
     """
 
     if value is None:
-        print('Warning: Utilities.url_encode() called without any value')
+        LOG.warning('url_encode() called without any value')
         return value
 
     return quote(value)
@@ -85,14 +89,14 @@ def create_find_time(time=''):
     time_format = '%Y-%m-%dT%H:%M:%S'
 
     if time is None or time == '':
-        print('Warning: create_find_time called without any time')
+        LOG.error('create_find_time() called without any time')
         return None
 
     try:
         int(UTC_OFFSET)
         utc_offset = UTC_OFFSET
     except (NameError, TypeError, ValueError):
-        print('Warning: Run get_utc_offset() first. Using UTC offset of 0.')
+        LOG.warning('Run get_utc_offset() first. Using UTC offset of 0.')
         utc_offset = 0
 
     time = time.replace('Z', '')
@@ -100,8 +104,7 @@ def create_find_time(time=''):
     try:
         time_stamp = datetime.strptime(time, time_format)
     except (NameError, TypeError, ValueError):
-        print('Error: Invalid timestamp: {}, required: {}.'
-              .format(time, time_format))
+        LOG.error('Invalid timestamp: %s, required: %s.', time, time_format)
         return -1
 
     return (time_stamp + timedelta(seconds=utc_offset)).strftime('%H:%M:%S')
@@ -124,18 +127,20 @@ def utc_to_local(utctime='', omityear=False):
         int(UTC_OFFSET)
         utc_offset = UTC_OFFSET
     except (NameError, ValueError):
-        print('Warning: Run get_utc_offset() first, using UTC offset of 0.')
+        LOG.warning('Run get_utc_offset() first. Using UTC offset of 0.')
         utc_offset = 0
 
     if utctime is None or utctime == '':
-        return 'Error: utc_to_local(): utctime is empty!'
+        LOG.error('utc_to_local(): utctime is empty!')
+        return
 
     utctime = utctime.replace('Z', '').replace('T', ' ')
 
     try:
         time_stamp = datetime.strptime(utctime, '%Y-%m-%d %H:%M:%S')
     except ValueError:
-        return 'Error: utc_to_local(): bad timestamp format!'
+        LOG.error('utc_to_local(): bad timestamp format!')
+        return
 
     if omityear:
         fromstring = '%m-%d %H:%M:%S'
@@ -159,7 +164,7 @@ def get_utc_offset(backend=None):
     global UTC_OFFSET
 
     if backend is None or backend == '':
-        print('get_utc_offset(): Error: backend not set.')
+        LOG.error('get_utc_offset(): Error: backend not set.')
         return -1
 
     try:
@@ -170,7 +175,7 @@ def get_utc_offset(backend=None):
         resp_dict = backend.send(endpoint='Myth/GetTimeZone', opts=None)
 
         if list(resp_dict.keys())[0] in ['Abort', 'Warning']:
-            print('get_utc_offset(): {}'.format(resp_dict))
+            LOG.error('get_utc_offset(): %s', resp_dict)
             return -1
         else:
             UTC_OFFSET = int(resp_dict['TimeZoneInfo']['UTCOffset'])
@@ -187,7 +192,7 @@ def rec_status_to_string(backend=None, rec_status=0, opts=None):
     """
 
     if backend is None or backend == '':
-        print('rec_status_to_string(): Error: backend not set.')
+        LOG.error('rec_status_to_string(): Error: backend not set.')
         return None
 
     try:
@@ -200,7 +205,7 @@ def rec_status_to_string(backend=None, rec_status=0, opts=None):
         resp_dict = backend.send(endpoint=endpoint, rest=rest, opts=opts)
 
         if list(resp_dict.keys())[0] in ['Abort', 'Warning']:
-            print('rec_status_to_string(): {}'.format(resp_dict))
+            LOG.error('rec_status_to_string(): %s', resp_dict)
             return resp_dict.keys()[0]
         else:
             REC_STATUS_CACHE[rec_status] = resp_dict['String']
@@ -217,7 +222,7 @@ def rec_type_to_string(backend=None, rec_type=0, opts=None):
     """
 
     if backend is None or backend == '':
-        print('rec_type_to_string(): Error: backend not set.')
+        LOG.error('rec_type_to_string(): Error: backend not set.')
         return None
 
     try:
@@ -230,7 +235,7 @@ def rec_type_to_string(backend=None, rec_type=0, opts=None):
         resp_dict = backend.send(endpoint=endpoint, rest=rest, opts=opts)
 
         if list(resp_dict.keys())[0] in ['Abort', 'Warning']:
-            print('rec_type_to_string(): {}'.format(resp_dict))
+            LOG.error('rec_type_to_string(): %s', resp_dict)
             return resp_dict.keys()[0]
         else:
             REC_TYPE_CACHE[rec_type] = resp_dict['String']
@@ -247,7 +252,7 @@ def dup_method_to_string(backend=None, dup_method=0, opts=None):
     """
 
     if backend is None or backend is '':
-        print('dup_method_to_string(): Error: backend not set.')
+        LOG.error('dup_method_to_string(): Error: backend not set.')
         return None
 
     try:
@@ -260,7 +265,7 @@ def dup_method_to_string(backend=None, dup_method=0, opts=None):
         resp_dict = backend.send(endpoint=endpoint, rest=rest, opts=opts)
 
         if list(resp_dict.keys())[0] in ['Abort', 'Warning']:
-            print('dup_method_to_string(): {}'.format(resp_dict))
+            LOG.warning('dup_method_to_string(): %s', resp_dict)
             return resp_dict.keys()[0]
         else:
             DUP_METHOD_CACHE[dup_method] = resp_dict['String']
