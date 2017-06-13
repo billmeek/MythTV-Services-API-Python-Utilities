@@ -218,7 +218,7 @@ class Send(object):
 
         url = self._form_url()
 
-        self._log('URL={}'.format(url))
+        self.logger.debug('URL=%s', url)
 
         if _the_response_is_unexpected(url):
             return url
@@ -279,14 +279,14 @@ class Send(object):
 
         if not ct_header:
             try:
-                self._log('1st 60 bytes of response: {}'
-                          .format(response.text[:60]))
+                self.logger.debug('1st 60 bytes of response: %s',
+                                  response.text[:60])
             except UnicodeEncodeError:
                 pass
 
         if ct_header == 'image':
             handle, filename = tempfile.mkstemp(suffix='.' + image_type)
-            self._log('created {}, remember to delete it.' .format(filename))
+            self.logger.debug('created %s, remember to delete it.', filename)
             with fdopen(handle, 'wb') as f_obj:
                 for chunk in response.iter_content(chunk_size=8192):
                     f_obj.write(chunk)
@@ -300,10 +300,6 @@ class Send(object):
         except ValueError as err:
             return {'Abort': 'Set loglevel=DEBUG to see JSON parsing error: {}'
                              .format(err)}
-
-    def _log(self, message):
-        """Log a message. Only here to shorten self.logger.debug() calls."""
-        self.logger.debug('%s', message)
 
     def _set_missing_opts(self):
         """
@@ -325,7 +321,7 @@ class Send(object):
         except KeyError:
             self.opts['timeout'] = 10
 
-        self._log('opts={}'.format(self.opts))
+        self.logger.debug('opts=%s', self.opts)
 
         return
 
@@ -356,9 +352,9 @@ class Send(object):
             return {'Abort': 'usage: postdata must be passed as a dict'}
 
         if self.postdata:
-            self._log('The following postdata was included:')
+            self.logger.debug('The following postdata was included:')
             for key in self.postdata:
-                self._log('  {:30} {}'.format(key, self.postdata[key]))
+                self.logger.debug('%30s: %s', key, self.postdata[key])
 
         if self.postdata and not self.opts['wrmi']:
             return {'Warning': 'wrmi=False'}
@@ -389,7 +385,7 @@ class Send(object):
         else:
             self.session.headers.update({'Accept': 'application/json'})
 
-        self._log('New session')
+        self.logger.debug('New session')
 
         # TODO: Problem with the BE not accepting postdata in the initial
         # authorized query, Using a GET first as a workaround. The stack
