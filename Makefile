@@ -30,7 +30,7 @@ clean:
 	@rm -rf build/*
 
 clobber: clean
-	@git rm -f dist/$(PACKAGE)-$(VERSION)-py?-none-any.whl
+	@git rm -f --ignore-unmatch dist/$(PACKAGE)-$(VERSION)-py?-none-any.whl
 
 uninstall: clobber
 	sudo -H pip2 uninstall $(PACKAGE)

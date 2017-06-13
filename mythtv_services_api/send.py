@@ -206,6 +206,8 @@ class Send(object):
                                     if args['debug'] else logging.INFO)
                 logging.getLogger('requests.packages.urllib3')
                                   .setLevel(logging.WARNING)
+                logging.getLogger('urllib3.connectionpool')
+                                  .setLevel(logging.WARNING)
 
         """
 
@@ -359,9 +361,11 @@ class Send(object):
             self.logger.debug('%15s: %s', key, self.postdata[key])
 
         if not self.opts['wrmi']:
+            #raise RuntimeWarning('wrmi=False')
             return {'Warning': 'wrmi=False'}
 
         if self.opts['wsdl'] and (self.rest or self.postdata):
+            #raise RuntimeError('usage: rest/postdata not allowed with WSDL')
             return {'Abort': 'usage: rest/postdata aren\'t allowed with WSDL'}
 
     def _create_session(self):
