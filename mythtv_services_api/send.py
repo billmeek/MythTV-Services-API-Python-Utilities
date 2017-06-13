@@ -52,10 +52,9 @@ class Send(object):
                   or frontend.
 
         port:     Only needed if the backend is using a different port
-                  (unlikely) or set to 6547 for frontend endpoints. Defaults
-                  to 6544.
+                  (unlikely) or set to the frontend port, which is usually
+                  6547. Defaults to 6544.
         """
-
 
         self.host = host
         self.port = port
@@ -71,23 +70,24 @@ class Send(object):
 
     def send(self, endpoint='', postdata=None, rest='', opts=None):
         """
-        Form a URL and send it to the back/frontend. Error handling is done
+        Form a URL and send it to the back/frontend.  Parameter/option checking
+        and session creation (if required) is done here. Error handling is done
         here too.
 
         EXAMPLES:
         =========
 
-        import mythtv_services_api.api as api
-        backend = api.Send(host='someName')
+        import mythtv_services_api.send
+        backend = send.Send(host='someName')
 
         backend.send(endpoint='Myth/GetHostName')
 
         Returns: {'String': 'someBackend'}
 
-        frontend = api.Send(host='someFrontend', port=6547)
+        frontend = send.Send(host='someFrontend', port=6547)
         frontend.send(endpoint='Frontend/GetStatus')
 
-        Returns: {'FrontendStatus': {'AudioTracks':...
+        Returns: {'FrontendStatus': {'AudioTracks': {}, 'Name': 'someHost', ...
 
         INPUT:
         ======
@@ -101,7 +101,7 @@ class Send(object):
 
                   If using postdata, TAKE CAUTION!!! Use opts['wrmi']=False
                   1st, turn on DEBUG level logging and then when happy with
-                  the data, make wrmi True.
+                  the data, make opts['wrmi']=True.
 
                   N.B. The MythTV Services API is still evolving and the wise
                   user will backup their DB before including postdata.
@@ -145,8 +145,8 @@ class Send(object):
         opts['pass']:    backend.
 
         opts['usexml']:  For testing only! If True, causes the backend to send
-                         its response in XML rather than JSON. This will force
-                         an error when parsing the response. Defaults to False.
+                         its response in XML rather than JSON. Defaults to
+                         False.
 
         opts['wrmi']:    If True and there is postdata, the URL is then sent to
                          the server.
@@ -346,17 +346,19 @@ class Send(object):
                                           self.rest)
 
     def _validate_postdata(self):
-        """Return an Abort if the postdata passed doesn't make sense"""
+        """
+        Return an Abort if the postdata passed doesn't make sense. The
+        caller should only call this if there is postdata.
+        """
 
-        if self.postdata and not isinstance(self.postdata, dict):
+        if not isinstance(self.postdata, dict):
             return {'Abort': 'usage: postdata must be passed as a dict'}
 
-        if self.postdata:
-            self.logger.debug('The following postdata was included:')
-            for key in self.postdata:
-                self.logger.debug('%15s: %s', key, self.postdata[key])
+        self.logger.debug('The following postdata was included:')
+        for key in self.postdata:
+            self.logger.debug('%15s: %s', key, self.postdata[key])
 
-        if self.postdata and not self.opts['wrmi']:
+        if not self.opts['wrmi']:
             return {'Warning': 'wrmi=False'}
 
         if self.opts['wsdl'] and (self.rest or self.postdata):
@@ -371,6 +373,7 @@ class Send(object):
         self.session = requests.Session()
         self.session.headers.update({'User-Agent': 'Python Services API v{}'
                                                    .format(__version__)})
+
         if self.opts['noetag']:
             self.session.headers.update({'Cache-Control': 'no-store'})
             self.session.headers.update({'If-None-Match': ''})
