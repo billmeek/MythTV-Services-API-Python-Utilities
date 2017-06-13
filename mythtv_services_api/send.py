@@ -30,16 +30,6 @@ from ._version import __version__
 MYTHTV_VERSION_LIST = ('0.27', '0.28', '29')
 
 
-def _the_response_is_unexpected(response):
-    """
-    Really here for readability. Used for Abort/Warning cases
-    where a dictionary response means there was a problem and
-    a return (with the explanation) should be made.
-    """
-
-    return isinstance(response, dict)
-
-
 class Send(object):
     """Services API."""
 
@@ -165,23 +155,26 @@ class Send(object):
         =======
 
         Either the response from the server in the selected format (default is
-        JSON.) Or a dict with keys in one of: 'Abort', 'Warning', 'WSDL', or
-        'Image'.
+        JSON.) Or an exception of RuntimeWarning or RuntimeError.
 
         Callers can handle the response like this:
 
             backend = api.Send(host=...)
-            response = backend.send(...)
 
-            if list(response.keys())[0] in ['Abort', 'Warning']:
-                {print|sys.exit}('{}'.format(list(response.values())[0]))
+            try:
+                response = backend.send(...)
+            except RuntimeError as error:
+                handle error...
+            except RuntimeWarning as error:
+                handle warning...
 
             normal processing...
 
-        If an 'Image' key is returned, then the caller is responsible for
-        deleting the temporary filename which is returned in its value e.g.
+        If an Image filename is returned, then the caller is responsible for
+        deleting the temporary filename which is returned in a RuntimeWarning
+        exception, e.g.:
 
-            {'Image': '/tmp/tmp5pxynqdf.jpeg'}
+            'Image file = "/tmp/tmp5pxynqdf.jpeg"'
 
         However, some errors returned by the server are in XML, e.g. if an
         endpoint is invalid. That will cause the JSON decoder to fail. In
@@ -222,16 +215,11 @@ class Send(object):
 
         self.logger.debug('URL=%s', url)
 
-        if _the_response_is_unexpected(url):
-            return url
-
         if self.session is None:
             self._create_session()
 
         if self.postdata:
-            pd_response = self._validate_postdata()
-            if _the_response_is_unexpected(pd_response):
-                return pd_response
+            self._validate_postdata()
 
         exceptions = (requests.exceptions.HTTPError,
                       requests.exceptions.URLRequired,
@@ -251,21 +239,18 @@ class Send(object):
             else:
                 response = self.session.get(url, timeout=self.opts['timeout'])
         except exceptions:
-            return {'Abort': 'Connection problem or Keyboard Interrupt, URL={}'
-                             .format(url)}
+            raise RuntimeError('Connection problem/Keyboard Interrupt, URL={}'
+                               .format(url))
 
         if response.status_code == 401:
-            return {'Abort': 'Unauthorized (401). Need valid user/password.'}
+            raise RuntimeError('Unauthorized (401). Need valid user/password.')
 
         # TODO: Should handle redirects here (mostly for remote backends.)
         if response.status_code > 299:
-            return {'Abort': 'Unexpected status returned: {}: URL was: {}'
-                             .format(response.status_code, url)}
+            raise RuntimeError('Unexpected status returned: {}: URL was: {}'
+                               .format(response.status_code, url))
 
-        server_header = self._validate_header(response.headers['Server'])
-
-        if _the_response_is_unexpected(server_header):
-            return server_header
+        self._validate_header(response.headers['Server'])
 
         try:
             ct_header, image_type = response.headers['Content-Type'].split('/')
@@ -292,7 +277,7 @@ class Send(object):
             with fdopen(handle, 'wb') as f_obj:
                 for chunk in response.iter_content(chunk_size=8192):
                     f_obj.write(chunk)
-            return {'Image': filename}
+            raise RuntimeWarning('Image file = "{}"'.format(filename))
 
         if self.opts['usexml']:
             return response.text
@@ -300,8 +285,8 @@ class Send(object):
         try:
             return response.json()
         except ValueError as err:
-            return {'Abort': 'Set loglevel=DEBUG to see JSON parsing error: {}'
-                             .format(err)}
+            raise RuntimeError('Set loglevel=DEBUG to see JSON pars error: {}'
+                               .format(err))
 
     def _set_missing_opts(self):
         """
@@ -331,13 +316,13 @@ class Send(object):
         """Do basic sanity checks and then form the URL."""
 
         if self.host == '':
-            return {'Abort': 'No host name.'}
+            raise RuntimeError('No host name.')
 
         if self.endpoint == '':
-            return {'Abort': 'No endpoint (e.g. Myth/GetHostName.)'}
+            raise RuntimeError('No endpoint (e.g. Myth/GetHostName.)')
 
         if self.postdata and self.rest:
-            return {'Abort': 'Use either postdata or rest.'}
+            raise RuntimeError('Use either postdata or rest.')
 
         if self.rest == '' or self.rest is None:
             self.rest = ''
@@ -354,19 +339,17 @@ class Send(object):
         """
 
         if not isinstance(self.postdata, dict):
-            return {'Abort': 'usage: postdata must be passed as a dict'}
+            raise RuntimeError('usage: postdata must be passed as a dict')
 
         self.logger.debug('The following postdata was included:')
         for key in self.postdata:
             self.logger.debug('%15s: %s', key, self.postdata[key])
 
         if not self.opts['wrmi']:
-            #raise RuntimeWarning('wrmi=False')
-            return {'Warning': 'wrmi=False'}
+            raise RuntimeWarning('wrmi=False')
 
         if self.opts['wsdl'] and (self.rest or self.postdata):
-            #raise RuntimeError('usage: rest/postdata not allowed with WSDL')
-            return {'Abort': 'usage: rest/postdata aren\'t allowed with WSDL'}
+            raise RuntimeError('usage: rest/postdata not allowed with WSDL')
 
     def _create_session(self):
         """
@@ -429,16 +412,16 @@ class Send(object):
         """
 
         if header is None:
-            return {'Abort': 'No HTTP "Server from host {}:" header returned.'
-                             .format(self.host)}
+            raise RuntimeError('No HTTP Server header returned from host {}.'
+                               .format(self.host))
 
         for version in MYTHTV_VERSION_LIST:
             if re.search(version, header):
                 self.server_version = version
                 return
 
-        return {'Abort': 'Tested on {}, not: {}.'.format(MYTHTV_VERSION_LIST,
-                                                         header)}
+        raise RuntimeError('Tested on {}, not: {}.'
+                           .format(MYTHTV_VERSION_LIST, header))
 
     @property
     def get_server_version(self):
