@@ -354,7 +354,7 @@ class Send(object):
         if self.postdata:
             self.logger.debug('The following postdata was included:')
             for key in self.postdata:
-                self.logger.debug('%30s: %s', key, self.postdata[key])
+                self.logger.debug('%15s: %s', key, self.postdata[key])
 
         if self.postdata and not self.opts['wrmi']:
             return {'Warning': 'wrmi=False'}
