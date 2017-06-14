@@ -67,7 +67,7 @@ class Send(object):
         EXAMPLES:
         =========
 
-        import mythtv_services_api.send
+        import mythtv_services_api.send as send
         backend = send.Send(host='someName')
 
         backend.send(endpoint='Myth/GetHostName')
@@ -264,13 +264,6 @@ class Send(object):
         if self.opts['wsdl']:
             return {'WSDL': response.text}
 
-        if not ct_header:
-            try:
-                self.logger.debug('1st 60 bytes of response: %s',
-                                  response.text[:60])
-            except UnicodeEncodeError:
-                pass
-
         if ct_header == 'image':
             handle, filename = tempfile.mkstemp(suffix='.' + image_type)
             self.logger.debug('created %s, remember to delete it.', filename)
@@ -278,6 +271,12 @@ class Send(object):
                 for chunk in response.iter_content(chunk_size=8192):
                     f_obj.write(chunk)
             raise RuntimeWarning('Image file = "{}"'.format(filename))
+        else:
+            try:
+                self.logger.debug('1st 60 bytes of response: %s',
+                                  response.text[:60])
+            except UnicodeEncodeError:
+                pass
 
         if self.opts['usexml']:
             return response.text
