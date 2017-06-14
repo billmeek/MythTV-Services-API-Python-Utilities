@@ -11,7 +11,7 @@ SOURCE = \
 usage:
 	@echo "\nUse: make install/uninstall/clean/clobber/push VERSION=M.m.f e.g VERSION=1.2.3\n"
 
-$(PACKAGE).egg-info/PKG-INFO install:
+$(PACKAGE).egg-info/PKG-INFO install: uninstall
 	@test -n $(VERSION)
 	@python2 setup.py bdist_wheel
 	@sudo -H pip2 install dist/$(PACKAGE)-$(VERSION)-py2-none-any.whl
@@ -21,6 +21,7 @@ $(PACKAGE).egg-info/PKG-INFO install:
 push:
 	@git add dist/mythtv_services_api-$(VERSION)-py?-none-any.whl
 	@git commit --message "Latest .whls for $(VERSION)" dist/$(PACKAGE)-$(VERSION)-py?-none-any.whl
+	@git tag --annotate $(VERSION) --message "Tag automatically created in: make push"
 	@git push
 
 clean:
