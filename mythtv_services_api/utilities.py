@@ -150,7 +150,7 @@ def utc_to_local(utctime='', omityear=False):
     return (time_stamp + timedelta(seconds=utc_offset)).strftime(fromstring)
 
 
-def get_utc_offset(backend=None):
+def get_utc_offset(backend=None, opts=None):
     """
     Get the backend's offset from UTC. Once retrieved, it's saved value is
     available in UTC_OFFSET and is returned too. Additional calls to this
@@ -172,7 +172,7 @@ def get_utc_offset(backend=None):
         return UTC_OFFSET
     except (NameError, TypeError, ValueError):
 
-        resp_dict = backend.send(endpoint='Myth/GetTimeZone', opts=None)
+        resp_dict = backend.send(endpoint='Myth/GetTimeZone', opts=opts)
 
         if list(resp_dict.keys())[0] in ['Abort', 'Warning']:
             LOG.error('get_utc_offset(): %s', resp_dict)

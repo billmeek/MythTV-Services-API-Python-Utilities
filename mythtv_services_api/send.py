@@ -68,8 +68,8 @@ class Send(object):
         =========
 
         import mythtv_services_api.send as send
-        backend = send.Send(host='someName')
 
+        backend = send.Send(host='someName')
         backend.send(endpoint='Myth/GetHostName')
 
         Returns: {'String': 'someBackend'}
@@ -321,7 +321,7 @@ class Send(object):
             raise RuntimeError('No endpoint (e.g. Myth/GetHostName.)')
 
         if self.postdata and self.rest:
-            raise RuntimeError('Use either postdata or rest.')
+            raise RuntimeError('Use either postdata or rest, not both.')
 
         if self.rest == '' or self.rest is None:
             self.rest = ''
@@ -377,23 +377,18 @@ class Send(object):
         self.logger.debug('New session')
 
         # TODO: Problem with the BE not accepting postdata in the initial
-        # authorized query, Using a GET first as a workaround. The stack
-        # thing is really ugly, must be a better solution.
+        # authorized query, Using a GET first as a workaround.
 
         try:
             if self.opts['user'] and self.opts['pass']:
                 self.session.auth = HTTPDigestAuth(self.opts['user'],
                                                    self.opts['pass'])
-                stack = []
-                stack.append(self.endpoint)
-                stack.append(self.postdata)
-                stack.append(self.rest)
-                stack.append(self.opts)
-                self.send(endpoint='Myth/version')
-                self.opts = stack.pop()
-                self.rest = stack.pop()
-                self.postdata = stack.pop()
-                self.endpoint = stack.pop()
+                if self.postdata:
+                    saved_endpoint = self.endpoint
+                    saved_postdata = self.postdata
+                    self.send(endpoint='Myth/version', opts=self.opts)
+                    self.endpoint = saved_endpoint
+                    self.postdata = saved_postdata
         except KeyError:
             # Proceed without authentication.
             pass
