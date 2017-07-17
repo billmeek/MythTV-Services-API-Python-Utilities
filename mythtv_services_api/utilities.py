@@ -191,7 +191,7 @@ def rec_status_to_string(backend=None, rec_status=0, opts=None):
     rec_status defaults to 0, which currently (29.0) means 'Unknown'
     """
 
-    if backend is None or backend == '':
+    if not backend:
         LOG.error('rec_status_to_string(): Error: backend not set.')
         return None
 
@@ -221,7 +221,7 @@ def rec_type_to_string(backend=None, rec_type=0, opts=None):
     rec_typedefaults to 0, which currently (29.0) means 'Not Recording'
     """
 
-    if backend is None or backend == '':
+    if not backend:
         LOG.error('rec_type_to_string(): Error: backend not set.')
         return None
 
@@ -251,7 +251,7 @@ def dup_method_to_string(backend=None, dup_method=0, opts=None):
     dup_method defaults to 0, which currently (29.0) means 'No Search'
     """
 
-    if backend is None or backend is '':
+    if not backend:
         LOG.error('dup_method_to_string(): Error: backend not set.')
         return None
 
