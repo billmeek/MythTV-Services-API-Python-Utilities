@@ -159,13 +159,13 @@ class Send(object):
 
         Callers can handle the response like this:
 
-            backend = api.Send(host=...)
+            backend = send.Send(host=...)
 
             try:
                 response = backend.send(...)
             except RuntimeError as error:
                 handle error...
-            except RuntimeWarning as error:
+            except RuntimeWarning as warning:
                 handle warning...
 
             normal processing...
@@ -323,7 +323,7 @@ class Send(object):
         if self.postdata and self.rest:
             raise RuntimeError('Use either postdata or rest, not both.')
 
-        if self.rest == '' or self.rest is None:
+        if not self.rest:
             self.rest = ''
         else:
             self.rest = '?' + self.rest
@@ -333,8 +333,8 @@ class Send(object):
 
     def _validate_postdata(self):
         """
-        Return an Abort if the postdata passed doesn't make sense. The
-        caller should only call this if there is postdata.
+        Return a RuntimeError if the postdata passed doesn't make sense. Call
+        this only if there is postdata.
         """
 
         if not isinstance(self.postdata, dict):
