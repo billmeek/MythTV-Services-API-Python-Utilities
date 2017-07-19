@@ -3,6 +3,7 @@ PACKAGE = mythtv_services_api
 SOURCE = \
 	setup.py \
 	setup.cfg \
+	unittests.py \
 	$(PACKAGE)/send.py \
 	$(PACKAGE)/utilities.py \
 	$(PACKAGE)/__init__.py \
