@@ -168,19 +168,16 @@ def get_utc_offset(backend=None, opts=None):
         return -1
 
     try:
-        int(UTC_OFFSET)
-        return UTC_OFFSET
-    except (NameError, TypeError, ValueError):
-
-        resp_dict = backend.send(endpoint='Myth/GetTimeZone', opts=opts)
-
-        if list(resp_dict.keys())[0] in ['Abort', 'Warning']:
-            LOG.error('get_utc_offset(): %s', resp_dict)
-            return -1
-        else:
+        try:
+            int(UTC_OFFSET)
+            return UTC_OFFSET
+        except (NameError, TypeError, ValueError):
+            resp_dict = backend.send(endpoint='Myth/GetTimeZone', opts=opts)
             UTC_OFFSET = int(resp_dict['TimeZoneInfo']['UTCOffset'])
-
-        return UTC_OFFSET
+            return UTC_OFFSET
+    except (RuntimeError, RuntimeWarning) as error:
+        LOG.error('get_utc_offset(): warning/failure: %s.', error)
+        return -1
 
 
 def rec_status_to_string(backend=None, rec_status=0, opts=None):
@@ -196,21 +193,21 @@ def rec_status_to_string(backend=None, rec_status=0, opts=None):
         return None
 
     try:
-        str(REC_STATUS_CACHE[rec_status])
-        return REC_STATUS_CACHE[rec_status]
-    except (KeyError, NameError, ValueError):
-        endpoint = 'Dvr/RecStatusToString'
-        rest = 'RecStatus={}'.format(rec_status)
+        try:
+            str(REC_STATUS_CACHE[rec_status])
+            return REC_STATUS_CACHE[rec_status]
+        except (KeyError, NameError, ValueError):
+            endpoint = 'Dvr/RecStatusToString'
+            rest = 'RecStatus={}'.format(rec_status)
 
-        resp_dict = backend.send(endpoint=endpoint, rest=rest, opts=opts)
+            resp_dict = backend.send(endpoint=endpoint, rest=rest, opts=opts)
 
-        if list(resp_dict.keys())[0] in ['Abort', 'Warning']:
-            LOG.error('rec_status_to_string(): %s', resp_dict)
-            return resp_dict.keys()[0]
-        else:
             REC_STATUS_CACHE[rec_status] = resp_dict['String']
 
-        return REC_STATUS_CACHE[rec_status]
+            return REC_STATUS_CACHE[rec_status]
+    except (RuntimeError, RuntimeWarning) as error:
+        LOG.error('rec_status_to_string(): warning/failure: %s.', error)
+        return None
 
 
 def rec_type_to_string(backend=None, rec_type=0, opts=None):
@@ -226,21 +223,21 @@ def rec_type_to_string(backend=None, rec_type=0, opts=None):
         return None
 
     try:
-        str(REC_TYPE_CACHE[rec_type])
-        return REC_TYPE_CACHE[rec_type]
-    except (KeyError, NameError, ValueError):
-        endpoint = 'Dvr/RecTypeToString'
-        rest = 'RecType={}'.format(rec_type)
+        try:
+            str(REC_TYPE_CACHE[rec_type])
+            return REC_TYPE_CACHE[rec_type]
+        except (KeyError, NameError, ValueError):
+            endpoint = 'Dvr/RecTypeToString'
+            rest = 'RecType={}'.format(rec_type)
 
-        resp_dict = backend.send(endpoint=endpoint, rest=rest, opts=opts)
+            resp_dict = backend.send(endpoint=endpoint, rest=rest, opts=opts)
 
-        if list(resp_dict.keys())[0] in ['Abort', 'Warning']:
-            LOG.error('rec_type_to_string(): %s', resp_dict)
-            return resp_dict.keys()[0]
-        else:
             REC_TYPE_CACHE[rec_type] = resp_dict['String']
 
-        return REC_TYPE_CACHE[rec_type]
+            return REC_TYPE_CACHE[rec_type]
+    except (RuntimeError, RuntimeWarning) as error:
+        LOG.error('rec_type_to_string(): warning/failure: %s.', error)
+        return None
 
 
 def dup_method_to_string(backend=None, dup_method=0, opts=None):
@@ -256,20 +253,20 @@ def dup_method_to_string(backend=None, dup_method=0, opts=None):
         return None
 
     try:
-        str(DUP_METHOD_CACHE[dup_method])
-        return DUP_METHOD_CACHE[dup_method]
-    except (KeyError, NameError, ValueError):
-        endpoint = 'Dvr/DupMethodToString'
-        rest = 'DupMethod={}'.format(dup_method)
+        try:
+            str(DUP_METHOD_CACHE[dup_method])
+            return DUP_METHOD_CACHE[dup_method]
+        except (KeyError, NameError, ValueError):
+            endpoint = 'Dvr/DupMethodToString'
+            rest = 'DupMethod={}'.format(dup_method)
 
-        resp_dict = backend.send(endpoint=endpoint, rest=rest, opts=opts)
+            resp_dict = backend.send(endpoint=endpoint, rest=rest, opts=opts)
 
-        if list(resp_dict.keys())[0] in ['Abort', 'Warning']:
-            LOG.warning('dup_method_to_string(): %s', resp_dict)
-            return resp_dict.keys()[0]
-        else:
             DUP_METHOD_CACHE[dup_method] = resp_dict['String']
 
-        return DUP_METHOD_CACHE[dup_method]
+            return DUP_METHOD_CACHE[dup_method]
+    except (RuntimeError, RuntimeWarning) as error:
+        LOG.error('dup_method_to_string(): warning/failure: %s.', error)
+        return None
 
 # vim: set expandtab tabstop=4 shiftwidth=4 smartindent noai colorcolumn=80:
