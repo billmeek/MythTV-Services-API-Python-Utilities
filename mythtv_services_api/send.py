@@ -287,6 +287,15 @@ class Send(object):
             raise RuntimeError('Set loglevel=DEBUG to see JSON pars error: {}'
                                .format(err))
 
+    def close_session(self):
+        """
+        This is here for unit tests that need to start a new session
+        so that noetag, nogzip and usexml (that were configured in
+        _create_session()) can be changed.
+        """
+
+        self.session.close()
+
     def _set_missing_opts(self):
         """
         Sets options not set by the caller to False (or 10 in the
@@ -433,11 +442,13 @@ class Send(object):
         """
         return self.opts
 
-    @property
-    def get_headers(self):
+    def get_headers(self, header=None):
         """
-        Returns the current headers.
+        Returns the current header or all headers if none is specified.
         """
-        return self.session.headers
+        if header is None:
+            return self.session.headers
+        else:
+            return self.session.headers[header]
 
 # vim: set expandtab tabstop=4 shiftwidth=4 smartindent noai colorcolumn=80:
