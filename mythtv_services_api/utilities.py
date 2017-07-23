@@ -88,7 +88,7 @@ def create_find_time(time=''):
 
     time_format = '%Y-%m-%dT%H:%M:%S'
 
-    if time is None or time == '':
+    if not time :
         LOG.error('create_find_time() called without any time')
         return None
 
@@ -126,11 +126,11 @@ def utc_to_local(utctime='', omityear=False):
     try:
         int(UTC_OFFSET)
         utc_offset = UTC_OFFSET
-    except (NameError, ValueError):
+    except (NameError, TypeError, ValueError):
         LOG.warning('Run get_utc_offset() first. Using UTC offset of 0.')
         utc_offset = 0
 
-    if utctime is None or utctime == '':
+    if not utctime:
         LOG.error('utc_to_local(): utctime is empty!')
         return
 
@@ -163,7 +163,7 @@ def get_utc_offset(backend=None, opts=None):
 
     global UTC_OFFSET
 
-    if backend is None or backend == '':
+    if not backend :
         LOG.error('get_utc_offset(): Error: backend not set.')
         return -1
 
