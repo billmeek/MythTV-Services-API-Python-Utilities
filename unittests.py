@@ -9,6 +9,7 @@ to the backend under test and current time zone offset respectively.
 '''
 
 import argparse
+import logging
 import unittest
 from mythtv_services_api import (send as api, utilities as util)
 
@@ -18,26 +19,28 @@ BACKEND = None
 TEST_HOST = 'mc0'
 TEST_UTC_OFFSET = -18000
 TEST_SERVER_VERSION = '29'
+TEST_DVR_VERSION = '6.4'
 
-REC_STATUS_DATA = [
-    ['Unknown', -17],
-    ['Missed', -11],
-    ['Tuning', -10],
-    ['Recorder Failed', -9],
-    ['Tuner Busy', -8],
-    ['Low Disk Space', -7],
-    ['Manual Cancel', -6],
-    ['Missed', -5],
-    ['Aborted', -4],
-    ['Recorded', -3],
-    ['Recording', -2],
-    ['Currently Recorded', 3],
-    ['Earlier Showing', 4],
-    ['Max Recordings', 5],
-    ['Not Listed', 6],
-    ['Recorder Off-Line', 12],
-    ['Unknown', 13],
-]
+REC_STATUS_DATA = {
+    # rec_status, expect
+    -17: 'Unknown',
+    -11: 'Missed',
+    -10: 'Tuning',
+    -9: 'Recorder Failed',
+    -8: 'Tuner Busy',
+    -7: 'Low Disk Space',
+    -6: 'Manual Cancel',
+    -5: 'Missed',
+    -4: 'Aborted',
+    -3: 'Recorded',
+    -2: 'Recording',
+    3: 'Currently Recorded',
+    4: 'Earlier Showing',
+    5: 'Max Recordings',
+    6: 'Not Listed',
+    12: 'Recorder Off-Line',
+    13: 'Unknown',
+}
 
 def process_command_line():
     '''
@@ -96,7 +99,8 @@ class MythTVServicesAPI(unittest.TestCase):
         function that needs test_a...() test_ad...()).
         '''
 
-        self.assertEqual(BACKEND.send(endpoint='Dvr/version')['String'], '6.4')
+        self.assertEqual(BACKEND.send(endpoint='Dvr/version')['String'],
+                         TEST_DVR_VERSION)
 
         self.assertTrue(BACKEND.server_version == TEST_SERVER_VERSION)
         self.assertFalse(BACKEND.server_version == '0.26')
@@ -124,12 +128,14 @@ class MythTVServicesAPI(unittest.TestCase):
                          {'WSDL': '{"String": "5.0"}'})
 
         session_options = {
+            # option, expect
             'noetag': '{\'String\': ',
             'nogzip': '{\'String\': ',
             'usexml': '<?xml version="1.0" encoding="UTF-8"?><String>',
         }
 
         expected_headers = {
+            # option, expect
             'noetag': ('If-None-Match', ''),
             'nogzip': ('Accept-Encoding', ''),
             'usexml': ('Accept', ''),
@@ -152,6 +158,7 @@ class MythTVServicesAPI(unittest.TestCase):
         '''
 
         headers_with_no_options_set = {
+            # header, value
             'Accept-Encoding': 'gzip,deflate',
             'Connection': 'keep-alive',
             'User-Agent': 'Python Services API v0.1.5',
@@ -304,7 +311,7 @@ class MythTVServicesAPI(unittest.TestCase):
         self.assertEqual(util.rec_status_to_string(None), None)
         self.assertEqual(util.rec_status_to_string(backend=None), None)
 
-        for expect, rec_status in REC_STATUS_DATA:
+        for rec_status, expect in REC_STATUS_DATA.items():
             self.assertEqual(util.rec_status_to_string(backend=BACKEND,
                                                        rec_status=rec_status),
                              expect)
@@ -319,7 +326,7 @@ class MythTVServicesAPI(unittest.TestCase):
         the above.
         '''
 
-        for expect, rec_status in REC_STATUS_DATA:
+        for rec_status, expect in REC_STATUS_DATA.items():
             self.assertEqual(util.rec_status_to_string(backend=BACKEND,
                                                        rec_status=rec_status),
                              expect)
@@ -337,17 +344,17 @@ class MythTVServicesAPI(unittest.TestCase):
         #                                         rec_type=None), None)
 
         rec_type_data = {
-            # rec_type: expected
+            # rec_type: expect
             1: 'Single Record',
             3: 'Not Recording',
             4: 'Record All',
             5: 'Record Weekly',
         }
 
-        for rec_type, expected in rec_type_data.items():
+        for rec_type, expect in rec_type_data.items():
             self.assertEqual(util.rec_type_to_string(backend=BACKEND,
                                                      rec_type=rec_type),
-                             expected)
+                             expect)
 
     def test_dup_method_to_string(self):
         '''
@@ -375,6 +382,12 @@ class MythTVServicesAPI(unittest.TestCase):
                 backend=BACKEND, dup_method=method), response)
 
 if __name__ == '__main__':
+
+    # Can't make this work with unittests: ARGS = process_command_line()
+    ARGS = {'debug': False}
+    logging.basicConfig(level=logging.DEBUG if ARGS['debug'] else logging.INFO)
+    logging.getLogger('requests.packages.urllib3').setLevel(logging.WARNING)
+    logging.getLogger('urllib3.connectionpool').setLevel(logging.WARNING)
 
     unittest.main()
 
