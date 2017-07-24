@@ -6,6 +6,9 @@ This may not qualify for true unit tests, but some of the following are.
 
 NOTE: The value of the TEST_* globals below must be changed manually for
 the system under test!
+
+ALSO: The user/pass opts are hardcoded to the default of admin/mythtv.
+It's unlikely that most will even be running with digest protection on.
 '''
 
 import argparse
@@ -92,8 +95,9 @@ class MythTVServicesAPI(unittest.TestCase):
         if BACKEND:
             BACKEND.close_session()
 
+        opts = {'user': 'admin', 'pass': 'mythtv'}
         BACKEND = api.Send(host=TEST_HOST)
-        BACKEND.send(endpoint=TEST_DVR_ENDPOINT)
+        BACKEND.send(endpoint=TEST_DVR_ENDPOINT, opts=opts)
         util.get_utc_offset(backend=BACKEND)
 
     def test_access(self):
@@ -118,7 +122,7 @@ class MythTVServicesAPI(unittest.TestCase):
         for key, value in BACKEND.get_opts.items():
             if key is 'timeout':
                 self.assertEqual(value, 10)
-            elif key is 'user' or key is 'pswd':
+            elif key is 'user' or key is 'pass':
                 pass
             else:
                 self.assertFalse(value)
@@ -144,13 +148,45 @@ class MythTVServicesAPI(unittest.TestCase):
         for option, expect in session_options.items():
             BACKEND.close_session()
             BACKEND = api.Send(host=TEST_HOST)
+            opts = {option: True, 'user': 'admin', 'pass': 'mythtv'}
             response = str(BACKEND.send(endpoint=TEST_DVR_ENDPOINT,
-                                        opts={option: True}))
+                                        opts=opts))
+
             self.assertIn(expect, response)
 
             self.assertEqual(BACKEND.get_headers(
                 header=expected_headers[option][0]),
                              expected_headers[option][1])
+
+    def test_digest(self):
+        '''
+        Verify that bad digest user and passwords fail. This test will
+        turn on authentication, try a bad password (expecting to fail
+        and then turn authentication off.
+        '''
+
+        global BACKEND
+
+        put = 'Myth/PutSetting'
+
+        kwargs = {'opts': {'user': 'admin', 'pass': 'mythtv', 'wrmi': True},
+                  'postdata': {'Key': 'HTTP/Protected/Urls', 'Value': '/Myth'}
+                 }
+        self.assertEqual(BACKEND.send(endpoint=put, **kwargs),
+                         {'bool': 'true'})
+
+        BACKEND.close_session()
+        BACKEND = api.Send(host=TEST_HOST)
+        kwargs = {'opts': {'user': 'admin', 'pass': 'Xmythtv', 'wrmi': True},
+                  'postdata': {'Key': 'HTTP/Protected/Urls', 'Value': '/Fail'}}
+        self.assertRaises(RuntimeError, BACKEND.send, endpoint=put, **kwargs)
+
+        BACKEND.close_session()
+        BACKEND = api.Send(host=TEST_HOST)
+        kwargs = {'opts': {'user': 'admin', 'pass': 'mythtv', 'wrmi': True},
+                  'postdata': {'Key': 'HTTP/Protected/Urls', 'Value': '/Off'}}
+        self.assertEqual(BACKEND.send(endpoint=put, **kwargs),
+                         {'bool': 'true'})
 
     def test_headers_using_default_opts(self):
         '''
@@ -182,7 +218,8 @@ class MythTVServicesAPI(unittest.TestCase):
         self.assertRaises(RuntimeError, BACKEND.send, endpoint=None)
 
         # invalid endpoint, backend will return a 404
-        self.assertRaises(RuntimeError, BACKEND.send, 'Myth/InvalidEndpoint')
+        self.assertRaises(RuntimeError, BACKEND.send,
+                          endpoint='Myth/InvalidEndpoint')
 
         # illegal rest and postdata
         args = {'endpoint': TEST_DVR_ENDPOINT}
@@ -383,10 +420,10 @@ if __name__ == '__main__':
 
     # Can't make this work with unittests: ARGS = process_command_line()
     ARGS = {'debug': False}
-    logging.basicConfig(level=logging.INFO
+    logging.basicConfig(level=logging.DEBUG
                         if ARGS['debug'] else logging.CRITICAL)
-    logging.getLogger('requests.packages.urllib3').setLevel(logging.WARNING)
-    logging.getLogger('urllib3.connectionpool').setLevel(logging.WARNING)
+    logging.getLogger('requests.packages.urllib3').setLevel(logging.ERROR)
+    logging.getLogger('urllib3.connectionpool').setLevel(logging.ERROR)
 
     unittest.main()
 
@@ -397,5 +434,6 @@ if __name__ == '__main__':
 # :!./% --verbose MythTVServicesAPI.test_rec_status_to_string
 # :!./% --verbose MythTVServicesAPI.test_runtime_exceptions
 # :!./% --verbose MythTVServicesAPI.test_utc_to_local
+# :!./% --verbose MythTVServicesAPI.test_digest
 
 # vim: set expandtab tabstop=4 shiftwidth=4 smartindent colorcolumn=80:
