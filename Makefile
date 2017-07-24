@@ -10,16 +10,16 @@ SOURCE = \
 	$(PACKAGE)/_version.py
 
 usage:
-	@echo "\nUse: make install/uninstall/clean/clobber/push [VERSION=1.2.3]\n"
+	@echo "\nUse: make target VERSION=M.m.f, e.g. make install VERSION=0.1.9\n"
 
-install: uninstall
+install: unittests uninstall
 	@echo "Installing VERSION: $(VERSION)"
 	@python2 setup.py bdist_wheel
 	@sudo -H pip2 install dist/$(PACKAGE)-$(VERSION)-py2-none-any.whl
 	@python3 setup.py bdist_wheel
 	@sudo -H pip3 install dist/$(PACKAGE)-$(VERSION)-py3-none-any.whl
 
-push:
+push: unittests
 	@test -n "$(VERSION)" || (echo "\nVERSION wasn't set!\n" && exit 1)
 	@echo "Pushing VERSION: $(VERSION)"
 	@git add dist/$(PACKAGE)-$(VERSION)-py?-none-any.whl
@@ -39,6 +39,11 @@ clobber: clean
 	@echo "Clobbering VERSION: $(VERSION)"
 	@git rm -f --ignore-unmatch dist/$(PACKAGE)-$(VERSION)-py?-none-any.whl
 
+unittests:
+	./unittests.py --verbose
+
 uninstall: clobber
 	sudo -H pip2 uninstall $(PACKAGE) || :
 	sudo -H pip3 uninstall $(PACKAGE) || :
+
+# vim: set colorcolumn=80:
