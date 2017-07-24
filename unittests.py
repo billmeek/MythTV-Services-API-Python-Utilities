@@ -4,22 +4,25 @@
 '''
 This may not qualify for true unit tests, but some of the following are.
 
-NOTE: The value of TEST_HOST and TEST_UTC_OFFSET (below) must be changed
-to the backend under test and current time zone offset respectively.
+NOTE: The value of the TEST_* globals below must be changed manually for
+the system under test!
 '''
 
 import argparse
 import logging
 import unittest
 from mythtv_services_api import (send as api, utilities as util)
+from mythtv_services_api._version import __version__
 
 global BACKEND
 BACKEND = None
 
-TEST_HOST = 'mc0'
-TEST_UTC_OFFSET = -18000
-TEST_SERVER_VERSION = '29'
 TEST_DVR_VERSION = '6.4'
+TEST_DVR_ENDPOINT = 'Dvr/version'
+TEST_HOST = 'mc0'
+TEST_PORT = 6544
+TEST_SERVER_VERSION = '29'
+TEST_UTC_OFFSET = -18000
 
 REC_STATUS_DATA = {
     # rec_status, expect
@@ -44,8 +47,8 @@ REC_STATUS_DATA = {
 
 def process_command_line():
     '''
-    THIS DOESN'T SEEM TO WORK, THE unittest MODULE SEEMS TO OVERRIDES IT OR
-    MAYBE HAS IT'S OWN ARGPARSE?
+    THIS DOESN'T SEEM TO WORK, THE unittest MODULE SEEMS TO OVERRIDE IT.
+    LEAVING IT HERE FOR NOW.
     '''
 
     parser = argparse.ArgumentParser(description='Print Upcoming Programs',
@@ -65,20 +68,24 @@ def process_command_line():
     parser.add_argument('--port', type=int, default=6544, metavar='<port>',
                         help='port number of the Services API (%(default)s)')
 
-    parser.add_argument('--version', action='version', version='%(prog)s 0.10')
+    parser.add_argument('--version', action='version', version='%(prog)s 0.11')
 
     return parser.parse_args()
 
 
+# pylint: disable=protected-access
 class MythTVServicesAPI(unittest.TestCase):
     ''' Test the MythTV Services API'''
 
     def setUp(self):
         '''
-        Called before every one of the following test()s. Guarantee
+        Called before every one of the following test_*()s. Guarantee
         that the session's options are set to their default values
         and that UTC time is set.
+
         '''
+
+        # TODO: Should really abort if this doesn't work.
 
         global BACKEND
 
@@ -86,27 +93,18 @@ class MythTVServicesAPI(unittest.TestCase):
             BACKEND.close_session()
 
         BACKEND = api.Send(host=TEST_HOST)
-        BACKEND.send(endpoint='Dvr/version')
+        BACKEND.send(endpoint=TEST_DVR_ENDPOINT)
+        util.get_utc_offset(backend=BACKEND)
 
     def test_access(self):
         '''
         Test basic backend access
-
-        Also, do the get_utc_offset() tests here so that the UTC_OFFSET
-        will be set for future tests.
-
-        Alphabetically, this function must be 1st (e.g. name any other
-        function that needs test_a...() test_ad...()).
         '''
 
-        self.assertEqual(BACKEND.send(endpoint='Dvr/version')['String'],
+        self.assertIsInstance(BACKEND, api.Send)
+        self.assertEqual(BACKEND.send(endpoint=TEST_DVR_ENDPOINT)['String'],
                          TEST_DVR_VERSION)
-
         self.assertTrue(BACKEND.server_version == TEST_SERVER_VERSION)
-        self.assertFalse(BACKEND.server_version == '0.26')
-
-        self.assertEqual(util.get_utc_offset(backend=BACKEND), TEST_UTC_OFFSET)
-        self.assertEqual(util.get_utc_offset(backend=None), -1)
 
     def test_default_opts(self):
         '''
@@ -120,12 +118,14 @@ class MythTVServicesAPI(unittest.TestCase):
         for key, value in BACKEND.get_opts.items():
             if key is 'timeout':
                 self.assertEqual(value, 10)
+            elif key is 'user' or key is 'pswd':
+                pass
             else:
                 self.assertFalse(value)
 
-        self.assertEqual(BACKEND.send(endpoint='Myth/version',
-                                      opts={'wsdl': True}),
-                         {'WSDL': '{"String": "5.0"}'})
+        response = '{"String": "' + TEST_DVR_VERSION + '"}'
+        self.assertEqual(BACKEND.send(endpoint=TEST_DVR_ENDPOINT,
+                                      opts={'wsdl': True}), {'WSDL': response})
 
         session_options = {
             # option, expect
@@ -135,7 +135,7 @@ class MythTVServicesAPI(unittest.TestCase):
         }
 
         expected_headers = {
-            # option, expect
+            # option, header, value (0, 1)
             'noetag': ('If-None-Match', ''),
             'nogzip': ('Accept-Encoding', ''),
             'usexml': ('Accept', ''),
@@ -144,7 +144,7 @@ class MythTVServicesAPI(unittest.TestCase):
         for option, expect in session_options.items():
             BACKEND.close_session()
             BACKEND = api.Send(host=TEST_HOST)
-            response = str(BACKEND.send(endpoint='Myth/version',
+            response = str(BACKEND.send(endpoint=TEST_DVR_ENDPOINT,
                                         opts={option: True}))
             self.assertIn(expect, response)
 
@@ -152,16 +152,17 @@ class MythTVServicesAPI(unittest.TestCase):
                 header=expected_headers[option][0]),
                              expected_headers[option][1])
 
-    def test_headers_with_default_opts(self):
+    def test_headers_using_default_opts(self):
         '''
         Test headers with all options False
         '''
 
+        user_agent = 'Python Services API v' + __version__
         headers_with_no_options_set = {
             # header, value
             'Accept-Encoding': 'gzip,deflate',
             'Connection': 'keep-alive',
-            'User-Agent': 'Python Services API v0.1.5',
+            'User-Agent': user_agent,
             'Accept': 'application/json'
         }
 
@@ -175,25 +176,24 @@ class MythTVServicesAPI(unittest.TestCase):
         In these tests, we're indirectly testing the _form_url() function.
         '''
 
-        # invalid endpoint combinations
+        # empty endpoint combinations
         self.assertRaises(RuntimeError, BACKEND.send)
         self.assertRaises(RuntimeError, BACKEND.send, endpoint='')
         self.assertRaises(RuntimeError, BACKEND.send, endpoint=None)
 
-        # bad endpoint, backend will return a 404
+        # invalid endpoint, backend will return a 404
         self.assertRaises(RuntimeError, BACKEND.send, 'Myth/InvalidEndpoint')
 
-        # rest and postdata
-        args = {'endpoint': 'Myth/version'}
+        # illegal rest and postdata
+        args = {'endpoint': TEST_DVR_ENDPOINT}
         kwargs = {'rest': 'Who=Cares',
                   'opts': {'wrmi': True},
                   'postdata': {'Some': 'Junk'}}
         self.assertRaises(RuntimeError, BACKEND.send, *args, **kwargs)
 
+        # Now check  _validate_postdata()
+
         args = {'endpoint': 'Myth/PutSetting'}
-
-        # Now do _validate_postdata()
-
         kwargs = {'postdata': {'Key': 'FakeSetting', 'HostName': TEST_HOST}}
 
         # postdata not a dict, *kwargs is intentionally missing a *
@@ -203,7 +203,6 @@ class MythTVServicesAPI(unittest.TestCase):
         self.assertRaises(RuntimeWarning, BACKEND.send, *args, **kwargs)
 
         # Finally, make sure wsdl can't be used with rest or postdata
-
         kwargs = {'opts': {'wrmi': True, 'wsdl': True},
                   'rest': 'Who=Cares'}
         self.assertRaises(RuntimeError, BACKEND.send, *args, **kwargs)
@@ -214,26 +213,24 @@ class MythTVServicesAPI(unittest.TestCase):
 
     def test_form_url(self):
         '''
-        Test _form_url(), which has no exceptions, just return a URL,
-        which is developed in the setUp() method.
+        Test _form_url(), which has no exceptions. It just returns a URL,
+        which is developed in the setUp() method. Watch out if the URL
+        is changed there!
         '''
 
-        url = 'http://{}:6544/Dvr/version'.format(TEST_HOST)
-        # pylint: disable=protected-access
+        url = 'http://{}:{}/{}'.format(TEST_HOST, TEST_PORT, TEST_DVR_ENDPOINT)
         self.assertEqual(BACKEND._form_url(), url)
-        # pylint: enable=protected-access
 
     def test_validate_header(self):
         '''
         Test _validate_header() RuntimeError exceptions
         '''
 
-        # pylint: disable=protected-access
+        header = 'MythTV/99-pre-5-g6865940-dirty Linux/3.13.0-85-generic'
+
         self.assertRaises(RuntimeError, BACKEND._validate_header, None)
         self.assertRaises(RuntimeError, BACKEND._validate_header, '')
-        header = 'MythTV/99-pre-5-g6865940-dirty Linux/3.13.0-85-generic'
         self.assertRaises(RuntimeError, BACKEND._validate_header, header)
-        # pylint: enable=protected-access
 
     def test_create_find_time(self):
         '''
@@ -247,11 +244,11 @@ class MythTVServicesAPI(unittest.TestCase):
             # time: response
             None: None,
             '': None,
-            '20170101 00:01:02': -1,
-            '2017-01-01 00:01:02': -1,
+            '20170101 08:01:02': -1,
+            '2017-01-01 09:01:02': -1,
             '2017-01-01T00:01:02': '19:01:02',
-            '2017-01-01T00:01:02Z': '19:01:02',
-            '2017-11-21T00:01:02Z': '19:01:02',
+            '2017-01-01T00:01:03Z': '19:01:03',
+            '2017-11-21T00:01:04Z': '19:01:04',
         }
 
         for time, response in create_find_time_data.items():
@@ -271,6 +268,7 @@ class MythTVServicesAPI(unittest.TestCase):
             'Edición': 'Edici%C3%B3n',
             'A != B': 'A%20%21%3D%20B',
             '@#$%^&*()-={}[]': '%40%23%24%25%5E%26%2A%28%29-%3D%7B%7D%5B%5D',
+            '~`|\\:;"\'<>?,./': '%7E%60%7C%5C%3A%3B%22%27%3C%3E%3F%2C./',
         }
 
         for source, response in encode_test_data.items():
@@ -281,10 +279,9 @@ class MythTVServicesAPI(unittest.TestCase):
         Test utc_to_local()
 
         Test two "no keyword" cases 1st, then loop through various
-        timestamps. Finally, test the omityear keyword.
+        combinations of timestamps. Finally, test the omityear keyword.
         '''
 
-        self.assertEqual(util.get_utc_offset(backend=BACKEND), TEST_UTC_OFFSET)
         self.assertIsNone(util.utc_to_local(None), msg='Null utctime')
         self.assertIsNone(util.utc_to_local(''), msg='Empty utctime')
 
@@ -311,6 +308,7 @@ class MythTVServicesAPI(unittest.TestCase):
         self.assertEqual(util.rec_status_to_string(None), None)
         self.assertEqual(util.rec_status_to_string(backend=None), None)
 
+        self.assertIsInstance(REC_STATUS_DATA, dict, msg=None)
         for rec_status, expect in REC_STATUS_DATA.items():
             self.assertEqual(util.rec_status_to_string(backend=BACKEND,
                                                        rec_status=rec_status),
@@ -326,6 +324,7 @@ class MythTVServicesAPI(unittest.TestCase):
         the above.
         '''
 
+        self.assertIsInstance(REC_STATUS_DATA, dict, msg=None)
         for rec_status, expect in REC_STATUS_DATA.items():
             self.assertEqual(util.rec_status_to_string(backend=BACKEND,
                                                        rec_status=rec_status),
@@ -339,12 +338,11 @@ class MythTVServicesAPI(unittest.TestCase):
         self.assertEqual(util.rec_type_to_string(backend=None,
                                                  rec_type=1), None)
 
-        # TODO: looks like a bug, rec_type 0 = Override Recording
-        #self.assertEqual(util.rec_type_to_string(backend=BACKEND,
-        #                                         rec_type=None), None)
-
         rec_type_data = {
             # rec_type: expect
+            # TODO: None case seems odd, expected the same as 0
+            None: 'Override Recording',
+            0: 'Not Recording',
             1: 'Single Record',
             3: 'Not Recording',
             4: 'Record All',
@@ -385,7 +383,8 @@ if __name__ == '__main__':
 
     # Can't make this work with unittests: ARGS = process_command_line()
     ARGS = {'debug': False}
-    logging.basicConfig(level=logging.DEBUG if ARGS['debug'] else logging.INFO)
+    logging.basicConfig(level=logging.INFO
+                        if ARGS['debug'] else logging.CRITICAL)
     logging.getLogger('requests.packages.urllib3').setLevel(logging.WARNING)
     logging.getLogger('urllib3.connectionpool').setLevel(logging.WARNING)
 
@@ -397,5 +396,6 @@ if __name__ == '__main__':
 # :!./% --verbose MythTVServicesAPI.test_utilities
 # :!./% --verbose MythTVServicesAPI.test_rec_status_to_string
 # :!./% --verbose MythTVServicesAPI.test_runtime_exceptions
+# :!./% --verbose MythTVServicesAPI.test_utc_to_local
 
 # vim: set expandtab tabstop=4 shiftwidth=4 smartindent colorcolumn=80:
