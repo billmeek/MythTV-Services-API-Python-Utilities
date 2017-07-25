@@ -3,7 +3,7 @@
 
 '''
 This is really a combination of unit tests and integration tests, so
-take the name with a grain of saly.
+take the name with a grain of salt.
 
 NOTE: The value of the TEST_* globals below must be changed manually for
 the system under test!
@@ -29,7 +29,7 @@ TEST_SERVER_VERSION = '29'
 TEST_UTC_OFFSET = -18000
 
 REC_STATUS_DATA = {
-    # rec_status, expect
+    # rec_status: expect
     -17: 'Unknown',
     -11: 'Missed',
     -10: 'Tuning',
@@ -49,10 +49,11 @@ REC_STATUS_DATA = {
     13: 'Unknown',
 }
 
+
 def process_command_line():
     '''
-    THIS DOESN'T SEEM TO WORK, THE unittest MODULE SEEMS TO OVERRIDE IT.
-    LEAVING IT HERE FOR NOW.
+    THIS DOESN'T WORK, THE unittest MODULE SEEMS TO OVERRIDE IT. LEAVING
+    IT HERE FOR NOW.
     '''
 
     parser = argparse.ArgumentParser(description='Print Upcoming Programs',
@@ -132,14 +133,14 @@ class MythTVServicesAPI(unittest.TestCase):
                                       opts={'wsdl': True}), {'WSDL': response})
 
         session_options = {
-            # option, expect
+            # option: expect
             'noetag': '{\'String\': ',
             'nogzip': '{\'String\': ',
             'usexml': '<?xml version="1.0" encoding="UTF-8"?><String>',
         }
 
         expected_headers = {
-            # option, header, value (0, 1)
+            # option: header, value (0, 1)
             'noetag': ('If-None-Match', ''),
             'nogzip': ('Accept-Encoding', ''),
             'usexml': ('Accept', ''),
@@ -170,8 +171,7 @@ class MythTVServicesAPI(unittest.TestCase):
         put = 'Myth/PutSetting'
 
         kwargs = {'opts': {'user': 'admin', 'pass': 'mythtv', 'wrmi': True},
-                  'postdata': {'Key': 'HTTP/Protected/Urls', 'Value': '/Myth'}
-                 }
+                  'postdata': {'Key': 'HTTP/Protected/Urls', 'Value': '/Myth'}}
         self.assertEqual(BACKEND.send(endpoint=put, **kwargs),
                          {'bool': 'true'})
 
@@ -195,7 +195,7 @@ class MythTVServicesAPI(unittest.TestCase):
 
         user_agent = 'Python Services API v' + __version__
         headers_with_no_options_set = {
-            # header, value
+            # header: value
             'Accept-Encoding': 'gzip,deflate',
             'Connection': 'keep-alive',
             'User-Agent': user_agent,
@@ -272,7 +272,6 @@ class MythTVServicesAPI(unittest.TestCase):
         self.assertRaises(RuntimeError, BACKEND._validate_header, '')
         self.assertRaises(RuntimeError, BACKEND._validate_header, header)
 
-
     def test_get_utc_offset(self):
         '''
         Test get_utc_offset(), which has already been used, but
@@ -283,7 +282,6 @@ class MythTVServicesAPI(unittest.TestCase):
         self.assertEqual(util.get_utc_offset(backend='', opts=None), -1)
         self.assertEqual(util.get_utc_offset(backend=BACKEND, opts=None),
                          TEST_UTC_OFFSET)
-
 
     def test_create_find_time(self):
         '''
@@ -310,7 +308,7 @@ class MythTVServicesAPI(unittest.TestCase):
         '''
 
         encode_test_data = {
-            #source: response
+            # source: response
             None: None,
             '': '',
             'ABCDEFGHIJKLMNOPQRSTUVWXYZ': 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
@@ -336,7 +334,7 @@ class MythTVServicesAPI(unittest.TestCase):
         self.assertIsNone(util.utc_to_local(''), msg='Empty utctime')
 
         utc_to_local_data = {
-            # time, response
+            # time: response
             None: None,
             '': None,
             '20170101 00:01:02': None,
@@ -431,7 +429,8 @@ class MythTVServicesAPI(unittest.TestCase):
 
 if __name__ == '__main__':
 
-    # Can't make this work with unittests: ARGS = process_command_line()
+    # Can't make this work with unittests:
+    # ARGS = process_command_line()
     ARGS = {'debug': False}
     logging.basicConfig(level=logging.DEBUG
                         if ARGS['debug'] else logging.CRITICAL)
