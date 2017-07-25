@@ -414,7 +414,7 @@ class Send(object):
             Linux 3.13.0-65-generic, UPnP/1.0, MythTV 0.27.20150622-1
         """
 
-        if header is None:
+        if not header:
             raise RuntimeError('No HTTP Server header returned from host {}.'
                                .format(self.host))
 
