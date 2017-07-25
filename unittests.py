@@ -12,6 +12,8 @@ ALSO: The user/pass opts are hardcoded to the default of admin/mythtv.
 It's unlikely that most will even be running with digest protection on.
 '''
 
+# pylint: disable=protected-access,global-at-module-level,global-statement
+
 import argparse
 import logging
 import unittest
@@ -78,7 +80,6 @@ def process_command_line():
     return parser.parse_args()
 
 
-# pylint: disable=protected-access
 class MythTVServicesAPI(unittest.TestCase):
     ''' Test the MythTV Services API'''
 
@@ -159,6 +160,7 @@ class MythTVServicesAPI(unittest.TestCase):
                 header=expected_headers[option][0]),
                              expected_headers[option][1])
 
+    # @unittest.skip('Uncomment to skip this test')
     def test_digest(self):
         '''
         Verify that bad digest user and passwords fail. This test will
@@ -266,11 +268,16 @@ class MythTVServicesAPI(unittest.TestCase):
         Test _validate_header() RuntimeError exceptions
         '''
 
-        header = 'MythTV/99-pre-5-g6865940-dirty Linux/3.13.0-85-generic'
+        header_data = {
+            # header: response
+            None: 'No HTTP Server header returned from host.*$',
+            '': 'No HTTP Server header returned from host.*$',
+            'MythTV/99 Linux/3.13.0-85-generic': 'Tested on.*not:.*$',
+        }
 
-        self.assertRaises(RuntimeError, BACKEND._validate_header, None)
-        self.assertRaises(RuntimeError, BACKEND._validate_header, '')
-        self.assertRaises(RuntimeError, BACKEND._validate_header, header)
+        for header, response in header_data.items():
+            with self.assertRaisesRegex(RuntimeError, response):
+                BACKEND._validate_header(header)
 
     def test_get_utc_offset(self):
         '''
