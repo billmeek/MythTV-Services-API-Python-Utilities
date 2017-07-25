@@ -156,7 +156,7 @@ def get_utc_offset(backend=None, opts=None):
     available in UTC_OFFSET and is returned too. Additional calls to this
     function aren't necessary, but if made, won't query the backend again.
 
-    Input:  backend object, optional port/opts.
+    Input:  backend object, optionally opts.
 
     Output: The offset (in seconds) or -1 and a message prints
     """
