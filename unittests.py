@@ -88,9 +88,9 @@ class MythTVServicesAPI(unittest.TestCase):
 
         '''
 
-        # TODO: Should really abort if this doesn't work.
-
         global BACKEND
+
+        # self.longMessage = True
 
         if BACKEND:
             BACKEND.close_session()
@@ -345,7 +345,7 @@ class MythTVServicesAPI(unittest.TestCase):
         self.assertEqual(util.rec_status_to_string(None), None)
         self.assertEqual(util.rec_status_to_string(backend=None), None)
 
-        self.assertIsInstance(REC_STATUS_DATA, dict, msg=None)
+        self.assertIsInstance(REC_STATUS_DATA, dict, msg='None case')
         for rec_status, expect in REC_STATUS_DATA.items():
             self.assertEqual(util.rec_status_to_string(backend=BACKEND,
                                                        rec_status=rec_status),
@@ -361,7 +361,7 @@ class MythTVServicesAPI(unittest.TestCase):
         the above.
         '''
 
-        self.assertIsInstance(REC_STATUS_DATA, dict, msg=None)
+        self.assertIsInstance(REC_STATUS_DATA, dict, msg='None case')
         for rec_status, expect in REC_STATUS_DATA.items():
             self.assertEqual(util.rec_status_to_string(backend=BACKEND,
                                                        rec_status=rec_status),

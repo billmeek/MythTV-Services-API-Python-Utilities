@@ -40,7 +40,7 @@ clobber: clean
 	@git rm -f --ignore-unmatch dist/$(PACKAGE)-$(VERSION)-py?-none-any.whl
 
 unittests:
-	./unittests.py --verbose
+	./unittests.py --failfast --verbose
 
 uninstall: clobber
 	sudo -H pip2 uninstall $(PACKAGE) || :
