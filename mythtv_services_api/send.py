@@ -326,11 +326,14 @@ class Send(object):
         if self.host == '':
             raise RuntimeError('No host name.')
 
-        if self.endpoint == '':
+        if not self.endpoint:
             raise RuntimeError('No endpoint (e.g. Myth/GetHostName.)')
 
         if self.postdata and self.rest:
             raise RuntimeError('Use either postdata or rest, not both.')
+
+        if self.opts['wsdl'] and self.rest:
+            raise RuntimeError('usage: rest not allowed with WSDL')
 
         if not self.rest:
             self.rest = ''
@@ -356,8 +359,8 @@ class Send(object):
         if not self.opts['wrmi']:
             raise RuntimeWarning('wrmi=False')
 
-        if self.opts['wsdl'] and (self.rest or self.postdata):
-            raise RuntimeError('usage: rest/postdata not allowed with WSDL')
+        if self.opts['wsdl'] and self.postdata:
+            raise RuntimeError('usage: postdata not allowed with WSDL')
 
     def _create_session(self):
         """
