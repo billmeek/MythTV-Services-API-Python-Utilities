@@ -163,26 +163,29 @@ class MythTVServicesAPI(unittest.TestCase):
     # @unittest.skip('Uncomment to skip this test')
     def test_digest(self):
         '''
-        Verify that bad digest user and passwords fail. This test will
-        turn on authentication, try a bad password (expecting to fail
-        and then turn authentication off.
+        Verify that bad digest user and passwords fail.
         '''
 
         global BACKEND
 
         put = 'Myth/PutSetting'
 
+        # Turn authentication on...
         kwargs = {'opts': {'user': 'admin', 'pass': 'mythtv', 'wrmi': True},
                   'postdata': {'Key': 'HTTP/Protected/Urls', 'Value': '/Myth'}}
         self.assertEqual(BACKEND.send(endpoint=put, **kwargs),
                          {'bool': 'true'})
 
+        # Try a POST with an invalid password...
         BACKEND.close_session()
         BACKEND = api.Send(host=TEST_HOST)
-        kwargs = {'opts': {'user': 'admin', 'pass': 'Xmythtv', 'wrmi': True},
+        kwargs = {'opts': {'user': 'admin', 'pass': 'XmythtvX', 'wrmi': True},
                   'postdata': {'Key': 'HTTP/Protected/Urls', 'Value': '/Fail'}}
-        self.assertRaises(RuntimeError, BACKEND.send, endpoint=put, **kwargs)
+        with self.assertRaisesRegex(RuntimeError,
+                                    r'Unauthorized \(401\)..*password.*$'):
+            BACKEND.send(endpoint=put, **kwargs)
 
+        # Turn authentication back off...
         BACKEND.close_session()
         BACKEND = api.Send(host=TEST_HOST)
         kwargs = {'opts': {'user': 'admin', 'pass': 'mythtv', 'wrmi': True},
@@ -215,20 +218,26 @@ class MythTVServicesAPI(unittest.TestCase):
         '''
 
         # empty endpoint combinations
-        self.assertRaises(RuntimeError, BACKEND.send)
-        self.assertRaises(RuntimeError, BACKEND.send, endpoint='')
-        self.assertRaises(RuntimeError, BACKEND.send, endpoint=None)
+        with self.assertRaisesRegex(RuntimeError, 'No endpoint'):
+            BACKEND.send()
+        with self.assertRaisesRegex(RuntimeError, 'No endpoint'):
+            BACKEND.send(endpoint='')
+        with self.assertRaisesRegex(RuntimeError, 'No endpoint'):
+            BACKEND.send(endpoint=None)
 
         # invalid endpoint, backend will return a 404
-        self.assertRaises(RuntimeError, BACKEND.send,
-                          endpoint='Myth/InvalidEndpoint')
+        with self.assertRaisesRegex(RuntimeError,
+                                    'Unexpected status returned: 404.*'):
+            BACKEND.send(endpoint='Myth/InvalidEndpoint')
 
         # illegal rest and postdata
         args = {'endpoint': TEST_DVR_ENDPOINT}
         kwargs = {'rest': 'Who=Cares',
                   'opts': {'wrmi': True},
                   'postdata': {'Some': 'Junk'}}
-        self.assertRaises(RuntimeError, BACKEND.send, *args, **kwargs)
+        with self.assertRaisesRegex(RuntimeError,
+                                    'Use either postdata or rest'):
+            BACKEND.send(*args, **kwargs)
 
     def test_validate_postdata_excepts(self):
         '''
@@ -239,19 +248,26 @@ class MythTVServicesAPI(unittest.TestCase):
         kwargs = {'postdata': {'Key': 'FakeSetting', 'HostName': TEST_HOST}}
 
         # postdata not a dict, *kwargs is intentionally missing a *
-        self.assertRaises(RuntimeError, BACKEND.send, *args, *kwargs)
+        with self.assertRaisesRegex(RuntimeError,
+                                    'usage: postdata must be passed as a dic'):
+            BACKEND.send(*args, *kwargs)
 
         # wrmi=False
-        self.assertRaises(RuntimeWarning, BACKEND.send, *args, **kwargs)
+        with self.assertRaisesRegex(RuntimeWarning, 'wrmi=False'):
+            BACKEND.send(*args, **kwargs)
 
-        # Finally, make sure wsdl can't be used with rest or postdata
+        # Final two tests, make sure wsdl can't be used with rest or postdata
         kwargs = {'opts': {'wrmi': True, 'wsdl': True},
                   'rest': 'Who=Cares'}
-        self.assertRaises(RuntimeError, BACKEND.send, *args, **kwargs)
+        with self.assertRaisesRegex(RuntimeError,
+                                    'usage: rest not allowed with WSDL'):
+            BACKEND.send(*args, **kwargs)
 
         kwargs = {'opts': {'wrmi': True, 'wsdl': True},
                   'postdata': {'Some': 'More Junk'}}
-        self.assertRaises(RuntimeError, BACKEND.send, *args, **kwargs)
+        with self.assertRaisesRegex(RuntimeError,
+                                    'usage: postdata not allowed with WSDL'):
+            BACKEND.send(*args, **kwargs)
 
     def test_form_url(self):
         '''
