@@ -46,6 +46,9 @@ class Send(object):
                   6547. Defaults to 6544.
         """
 
+        if not host:
+            raise RuntimeError('Missing host argument')
+
         self.host = host
         self.port = port
         self.endpoint = None
