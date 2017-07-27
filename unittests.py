@@ -8,8 +8,9 @@ take the name with a grain of salt.
 NOTE: The value of the TEST_* globals below must be changed manually for
 the system under test!
 
-ALSO: The user/pass opts are hardcoded to the default of admin/mythtv.
-It's unlikely that most will even be running with digest protection on.
+ALSO: The user/pass opts are hardcoded to the MythTV default of
+admin/mythtv. It's unlikely that most will even be running with
+digest protection on.
 '''
 
 # pylint: disable=protected-access,global-at-module-level,global-statement
@@ -17,6 +18,7 @@ It's unlikely that most will even be running with digest protection on.
 import argparse
 import logging
 import unittest
+import requests
 from mythtv_services_api import (send as api, utilities as util)
 from mythtv_services_api._version import __version__
 
@@ -27,7 +29,7 @@ TEST_DVR_ENDPOINT = 'Dvr/version'
 TEST_DVR_VERSION = '6.4'
 TEST_HOST = 'mc0'
 TEST_PORT = 6544
-TEST_SERVER_VERSION = '29'
+TEST_SERVER_VERSION = '30'
 TEST_UTC_OFFSET = -18000
 
 REC_STATUS_DATA = {
@@ -99,18 +101,28 @@ class MythTVServicesAPI(unittest.TestCase):
 
         opts = {'user': 'admin', 'pass': 'mythtv'}
         BACKEND = api.Send(host=TEST_HOST)
-        BACKEND.send(endpoint=TEST_DVR_ENDPOINT, opts=opts)
-        util.get_utc_offset(backend=BACKEND)
+        self.assertIsInstance(BACKEND, api.Send)
+        self.assertEqual(BACKEND.send(endpoint=TEST_DVR_ENDPOINT,
+                                      opts=opts)['String'],
+                         TEST_DVR_VERSION)
+        self.assertEqual(util.get_utc_offset(backend=BACKEND),
+                         TEST_UTC_OFFSET)
+
 
     def test_access(self):
         '''
-        Test basic backend access
+        Do additional basic access tests that setUp() doesn't need to
+        do every time it's called.
         '''
 
-        self.assertIsInstance(BACKEND, api.Send)
-        self.assertEqual(BACKEND.send(endpoint=TEST_DVR_ENDPOINT)['String'],
-                         TEST_DVR_VERSION)
         self.assertTrue(BACKEND.server_version == TEST_SERVER_VERSION)
+        self.assertIsInstance(BACKEND.get_headers(),
+                              requests.structures.CaseInsensitiveDict)
+
+        BACKEND.close_session()
+        with self.assertRaisesRegex(RuntimeError, 'Missing host argument'):
+            api.Send(host=None)
+
 
     def test_default_opts(self):
         '''
@@ -135,8 +147,8 @@ class MythTVServicesAPI(unittest.TestCase):
 
         session_options = {
             # option: expect
-            'noetag': '{\'String\': ',
-            'nogzip': '{\'String\': ',
+            'noetag': "{'String': ",
+            'nogzip': "{'String': ",
             'usexml': '<?xml version="1.0" encoding="UTF-8"?><String>',
         }
 
@@ -168,6 +180,13 @@ class MythTVServicesAPI(unittest.TestCase):
 
         global BACKEND
 
+        # Save the existing protected service(s)...
+        kwargs = {'opts': {'user': 'admin', 'pass': 'mythtv', 'wrmi': True},
+                  'postdata': {'Key': 'HTTP/Protected/Urls',
+                               'HostName': '_GLOBAL_'}}
+        value = BACKEND.send(endpoint='Myth/GetSetting', **kwargs)['String']
+        self.assertIsNotNone(value)
+
         put = 'Myth/PutSetting'
 
         # Turn authentication on...
@@ -176,20 +195,20 @@ class MythTVServicesAPI(unittest.TestCase):
         self.assertEqual(BACKEND.send(endpoint=put, **kwargs),
                          {'bool': 'true'})
 
-        # Try a POST with an invalid password...
+        # Create a new session and try a POST with an invalid password...
         BACKEND.close_session()
         BACKEND = api.Send(host=TEST_HOST)
         kwargs = {'opts': {'user': 'admin', 'pass': 'XmythtvX', 'wrmi': True},
                   'postdata': {'Key': 'HTTP/Protected/Urls', 'Value': '/Fail'}}
         with self.assertRaisesRegex(RuntimeError,
-                                    r'Unauthorized \(401\)..*password.*$'):
+                                    r'Unauthorized \(401\)..*password'):
             BACKEND.send(endpoint=put, **kwargs)
 
         # Turn authentication back off...
         BACKEND.close_session()
         BACKEND = api.Send(host=TEST_HOST)
         kwargs = {'opts': {'user': 'admin', 'pass': 'mythtv', 'wrmi': True},
-                  'postdata': {'Key': 'HTTP/Protected/Urls', 'Value': '/Off'}}
+                  'postdata': {'Key': 'HTTP/Protected/Urls', 'Value': value}}
         self.assertEqual(BACKEND.send(endpoint=put, **kwargs),
                          {'bool': 'true'})
 
@@ -227,7 +246,7 @@ class MythTVServicesAPI(unittest.TestCase):
 
         # invalid endpoint, backend will return a 404
         with self.assertRaisesRegex(RuntimeError,
-                                    'Unexpected status returned: 404.*'):
+                                    'Unexpected status returned: 404'):
             BACKEND.send(endpoint='Myth/InvalidEndpoint')
 
         # illegal rest and postdata
@@ -286,9 +305,9 @@ class MythTVServicesAPI(unittest.TestCase):
 
         header_data = {
             # header: response
-            None: 'No HTTP Server header returned from host.*$',
-            '': 'No HTTP Server header returned from host.*$',
-            'MythTV/99 Linux/3.13.0-85-generic': 'Tested on.*not:.*$',
+            None: 'No HTTP Server header returned from host',
+            '': 'No HTTP Server header returned from host',
+            'MythTV/99 Linux/3.13.0-85-generic': 'Tested on.*not:',
         }
 
         for header, response in header_data.items():
