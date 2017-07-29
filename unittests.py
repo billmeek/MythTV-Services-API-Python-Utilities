@@ -25,12 +25,15 @@ from mythtv_services_api._version import __version__
 global BACKEND
 BACKEND = None
 
-TEST_DVR_ENDPOINT = 'Dvr/version'
+# Adjust for the system under test:
 TEST_DVR_VERSION = '6.4'
 TEST_HOST = 'mc0'
-TEST_PORT = 6544
 TEST_SERVER_VERSION = '30'
 TEST_UTC_OFFSET = -18000
+
+# These two are most likely OK:
+TEST_ENDPOINT = 'Dvr/version'
+TEST_PORT = 6544
 
 REC_STATUS_DATA = {
     # rec_status: expect
@@ -56,7 +59,7 @@ REC_STATUS_DATA = {
 
 def process_command_line():
     '''
-    THIS DOESN'T WORK, THE unittest MODULE SEEMS TO OVERRIDE IT. LEAVING
+    THIS DOESN'T WORK. THE unittest MODULE SEEMS TO OVERRIDE IT. LEAVING
     IT HERE FOR NOW.
     '''
 
@@ -102,7 +105,7 @@ class MythTVServicesAPI(unittest.TestCase):
         opts = {'user': 'admin', 'pass': 'mythtv'}
         BACKEND = api.Send(host=TEST_HOST)
         self.assertIsInstance(BACKEND, api.Send)
-        self.assertEqual(BACKEND.send(endpoint=TEST_DVR_ENDPOINT,
+        self.assertEqual(BACKEND.send(endpoint=TEST_ENDPOINT,
                                       opts=opts)['String'],
                          TEST_DVR_VERSION)
         self.assertEqual(util.get_utc_offset(backend=BACKEND),
@@ -142,7 +145,7 @@ class MythTVServicesAPI(unittest.TestCase):
                 self.assertFalse(value)
 
         response = '{"String": "' + TEST_DVR_VERSION + '"}'
-        self.assertEqual(BACKEND.send(endpoint=TEST_DVR_ENDPOINT,
+        self.assertEqual(BACKEND.send(endpoint=TEST_ENDPOINT,
                                       opts={'wsdl': True}), {'WSDL': response})
 
         session_options = {
@@ -163,7 +166,7 @@ class MythTVServicesAPI(unittest.TestCase):
             BACKEND.close_session()
             BACKEND = api.Send(host=TEST_HOST)
             opts = {option: True, 'user': 'admin', 'pass': 'mythtv'}
-            response = str(BACKEND.send(endpoint=TEST_DVR_ENDPOINT,
+            response = str(BACKEND.send(endpoint=TEST_ENDPOINT,
                                         opts=opts))
 
             self.assertIn(expect, response)
@@ -181,6 +184,8 @@ class MythTVServicesAPI(unittest.TestCase):
         global BACKEND
 
         # Save the existing protected service(s)...
+        BACKEND.close_session()
+        BACKEND = api.Send(host=TEST_HOST)
         kwargs = {'opts': {'user': 'admin', 'pass': 'mythtv', 'wrmi': True},
                   'postdata': {'Key': 'HTTP/Protected/Urls',
                                'HostName': '_GLOBAL_'}}
@@ -236,7 +241,7 @@ class MythTVServicesAPI(unittest.TestCase):
         In these tests, we're indirectly testing the _form_url() function.
         '''
 
-        # empty endpoint combinations
+        # Empty endpoint combinations
         with self.assertRaisesRegex(RuntimeError, 'No endpoint'):
             BACKEND.send()
         with self.assertRaisesRegex(RuntimeError, 'No endpoint'):
@@ -244,13 +249,13 @@ class MythTVServicesAPI(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'No endpoint'):
             BACKEND.send(endpoint=None)
 
-        # invalid endpoint, backend will return a 404
+        # Invalid endpoint, backend will return a 404
         with self.assertRaisesRegex(RuntimeError,
                                     'Unexpected status returned: 404'):
             BACKEND.send(endpoint='Myth/InvalidEndpoint')
 
-        # illegal rest and postdata
-        args = {'endpoint': TEST_DVR_ENDPOINT}
+        # Illegal rest and postdata
+        args = {'endpoint': TEST_ENDPOINT}
         kwargs = {'rest': 'Who=Cares',
                   'opts': {'wrmi': True},
                   'postdata': {'Some': 'Junk'}}
@@ -266,12 +271,12 @@ class MythTVServicesAPI(unittest.TestCase):
         args = {'endpoint': 'Myth/PutSetting'}
         kwargs = {'postdata': {'Key': 'FakeSetting', 'HostName': TEST_HOST}}
 
-        # postdata not a dict, *kwargs is intentionally missing a *
+        # Postdata not a dict, *kwargs is intentionally missing a *
         with self.assertRaisesRegex(RuntimeError,
                                     'usage: postdata must be passed as a dic'):
             BACKEND.send(*args, *kwargs)
 
-        # wrmi=False
+        # Need wrmi=True for postdata
         with self.assertRaisesRegex(RuntimeWarning, 'wrmi=False'):
             BACKEND.send(*args, **kwargs)
 
@@ -295,7 +300,7 @@ class MythTVServicesAPI(unittest.TestCase):
         is changed there!
         '''
 
-        url = 'http://{}:{}/{}'.format(TEST_HOST, TEST_PORT, TEST_DVR_ENDPOINT)
+        url = 'http://{}:{}/{}'.format(TEST_HOST, TEST_PORT, TEST_ENDPOINT)
         self.assertEqual(BACKEND._form_url(), url)
 
     def test_validate_header(self):
