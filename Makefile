@@ -19,8 +19,7 @@ install: unittests uninstall
 	@python3 setup.py bdist_wheel
 	@sudo -H pip3 install dist/$(PACKAGE)-$(VERSION)-py3-none-any.whl
 
-push: unittests
-	@test -n "$(VERSION)" || (echo "\nVERSION wasn't set!\n" && exit 1)
+push: version unittests
 	@echo "Pushing VERSION: $(VERSION)"
 	@git add dist/$(PACKAGE)-$(VERSION)-py?-none-any.whl
 	@git commit --message "Latest .whls for: $(VERSION)." \
@@ -34,8 +33,7 @@ clean:
 	@rm -rf $(PACKAGE).egg-info
 	@rm -rf build/*
 
-clobber: clean
-	@test -n "$(VERSION)" || (echo "\nVERSION wasn't set!\n" && exit 1)
+clobber:version  clean
 	@echo "Clobbering VERSION: $(VERSION)"
 	@git rm -f --ignore-unmatch dist/$(PACKAGE)-$(VERSION)-py?-none-any.whl
 
@@ -45,5 +43,8 @@ unittests:
 uninstall: clobber
 	sudo -H pip2 uninstall $(PACKAGE) || :
 	sudo -H pip3 uninstall $(PACKAGE) || :
+
+version:
+	@test -n "$(VERSION)" || (echo "\nVERSION wasn't set!\n" && exit 1)
 
 # vim: set colorcolumn=80:
