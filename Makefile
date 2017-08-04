@@ -1,6 +1,6 @@
 PACKAGE = mythtv_services_api
 
-SOURCE = \
+SOURCES = \
 	setup.py \
 	setup.cfg \
 	unittests.py \
@@ -47,4 +47,4 @@ uninstall: clobber
 version:
 	@test -n "$(VERSION)" || (echo "\nVERSION wasn't set!\n" && exit 1)
 
-# vim: set colorcolumn=80:
+# vim: set colorcolumn=80 noexpandtab:
