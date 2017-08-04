@@ -33,7 +33,7 @@ clean:
 	@rm -rf $(PACKAGE).egg-info
 	@rm -rf build/*
 
-clobber:version  clean
+clobber: version clean
 	@echo "Clobbering VERSION: $(VERSION)"
 	@git rm -f --ignore-unmatch dist/$(PACKAGE)-$(VERSION)-py?-none-any.whl
 
