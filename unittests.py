@@ -15,7 +15,6 @@ digest protection on.
 
 # pylint: disable=protected-access,global-at-module-level,global-statement
 
-import argparse
 import logging
 import unittest
 import requests
@@ -57,34 +56,6 @@ REC_STATUS_DATA = {
 }
 
 
-def process_command_line():
-    '''
-    THIS DOESN'T WORK. THE unittest MODULE SEEMS TO OVERRIDE IT. LEAVING
-    IT HERE FOR NOW.
-    '''
-
-    parser = argparse.ArgumentParser(description='Print Upcoming Programs',
-                                     epilog='Default values are in ()s')
-
-    mandatory = parser.add_argument_group('requrired arguments')
-
-    parser.add_argument('--debug', action='store_true',
-                        help='turn on debug messages (%(default)s)')
-
-    parser.add_argument('--digest', type=str, metavar='<user:pass>',
-                        help='digest username:password')
-
-    mandatory.add_argument('--host', type=str, required=True,
-                           metavar='<hostname>', help='backend hostname')
-
-    parser.add_argument('--port', type=int, default=6544, metavar='<port>',
-                        help='port number of the Services API (%(default)s)')
-
-    parser.add_argument('--version', action='version', version='%(prog)s 0.11')
-
-    return parser.parse_args()
-
-
 class MythTVServicesAPI(unittest.TestCase):
     ''' Test the MythTV Services API'''
 
@@ -111,7 +82,6 @@ class MythTVServicesAPI(unittest.TestCase):
         self.assertEqual(util.get_utc_offset(backend=BACKEND),
                          TEST_UTC_OFFSET)
 
-
     def test_access(self):
         '''
         Do additional basic access tests that setUp() doesn't need to
@@ -125,7 +95,6 @@ class MythTVServicesAPI(unittest.TestCase):
         BACKEND.close_session()
         with self.assertRaisesRegex(RuntimeError, 'Missing host argument'):
             api.Send(host=None)
-
 
     def test_default_opts(self):
         '''
@@ -409,15 +378,10 @@ class MythTVServicesAPI(unittest.TestCase):
                                                        rec_status=rec_status),
                              expect)
 
-    def test_rec_status_to_string_cache(self):
-        '''
-        Test rec_status_to_string() for cached strings
-
-        Same as previous test, but the strings should be in cache now. The
-        only way to check is to look at the backend log (with -v http turned
-        on.) Watch for: Connection -1 closed. 17 requests were handled from
-        the above.
-        '''
+        # Same as previous test, but the strings should be in cache now. The
+        # only way to check is to look at the backend log (with -v http turned
+        # on.) Watch for: Connection -1 closed. 17 requests were handled from
+        # the above.
 
         self.assertIsInstance(REC_STATUS_DATA, dict, msg='None case')
         for rec_status, expect in REC_STATUS_DATA.items():
@@ -473,6 +437,7 @@ class MythTVServicesAPI(unittest.TestCase):
         for method, response in dup_method_and_response.items():
             self.assertEqual(util.dup_method_to_string(
                 backend=BACKEND, dup_method=method), response)
+
 
 if __name__ == '__main__':
 
