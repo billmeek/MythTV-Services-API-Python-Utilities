@@ -29,6 +29,7 @@ from __future__ import absolute_import
 from datetime import datetime, timedelta
 import logging
 import sys
+from ._version import __version__
 
 # pylint: disable=no-name-in-module, import-error
 if sys.version_info[0] == 2:
@@ -38,8 +39,6 @@ elif sys.version_info[0] == 3:
 else:
     sys.exit('Unable to import urllib')
 # pylint: enable=no-name-in-module, import-error
-
-from ._version import __version__
 
 REC_STATUS_CACHE = {}
 REC_TYPE_CACHE = {}
@@ -88,7 +87,7 @@ def create_find_time(time=''):
 
     time_format = '%Y-%m-%dT%H:%M:%S'
 
-    if not time :
+    if not time:
         LOG.error('create_find_time() called without any time')
         return None
 
@@ -163,7 +162,7 @@ def get_utc_offset(backend=None, opts=None):
 
     global UTC_OFFSET
 
-    if not backend :
+    if not backend:
         LOG.error('get_utc_offset(): Error: backend not set.')
         return -1
 
