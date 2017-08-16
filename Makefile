@@ -38,11 +38,11 @@ clobber: version clean
 	@git rm -f --ignore-unmatch dist/$(PACKAGE)-$(VERSION)-py?-none-any.whl
 
 unittests:
-	./unittests.py
+	@./unittests.py
 
 uninstall: clobber
-	sudo -H pip2 uninstall $(PACKAGE) || :
-	sudo -H pip3 uninstall $(PACKAGE) || :
+	@sudo -H pip2 uninstall $(PACKAGE) || :
+	@sudo -H pip3 uninstall $(PACKAGE) || :
 
 version:
 	@test -n "$(VERSION)" || (echo "\nVERSION wasn't set!\n" && exit 1)
