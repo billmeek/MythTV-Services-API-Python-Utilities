@@ -26,5 +26,7 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 3'
     ],
-    url=['https://www.mythtv.org/wiki/Python_API_Examples']
+    install_requires=['requests', 'future'],
+    url='https://www.mythtv.org/wiki/Python_API_Examples'
 )
+#requirements = ["zope.interface >= 3.6.0"],

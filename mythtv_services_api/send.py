@@ -27,7 +27,7 @@ from ._version import __version__
 # an HTTP POST is potentially dangerous.                     #
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
 
-MYTHTV_VERSION_LIST = ('0.27', '0.28', '29', '30')
+MYTHTV_VERSION_LIST = ('0.28', '29', '30')
 
 
 class Send(object):
@@ -255,6 +255,11 @@ class Send(object):
 
         self._validate_header(response.headers['Server'])
 
+        self.logger.debug('Response headers: %s', response.headers)
+
+        if response.encoding is None:
+            response.encoding = 'UTF8'
+
         try:
             ct_header, image_type = response.headers['Content-Type'].split('/')
         except (KeyError, ValueError):
@@ -287,7 +292,7 @@ class Send(object):
         try:
             return response.json()
         except ValueError as err:
-            raise RuntimeError('Set loglevel=DEBUG to see JSON pars error: {}'
+            raise RuntimeError('Set loglevel=DEBUG to see JSON parse error: {}'
                                .format(err))
 
     def close_session(self):
@@ -415,17 +420,19 @@ class Send(object):
         are kept in MYTHTV_VERSION_LIST and checked against responses
         like:
 
+            MythTV/30-Pre-9-g1234567-dirty Linux/3.13.0-85-generic UPnP/1.0.
             MythTV/29-pre-5-g6865940-dirty Linux/3.13.0-85-generic UPnP/1.0.
             MythTV/28.0-10-g57c1afb Linux/4.4.0-21-generic UPnP/1.0.
-            Linux 3.13.0-65-generic, UPnP/1.0, MythTV 0.27.20150622-1
         """
 
         if not header:
             raise RuntimeError('No HTTP Server header returned from host {}.'
                                .format(self.host))
 
+        self.logger.debug('Received Server: %s', header)
+
         for version in MYTHTV_VERSION_LIST:
-            if re.search(version, header):
+            if re.search('MythTV/' + version, header):
                 self.server_version = version
                 return
 
@@ -450,9 +457,14 @@ class Send(object):
 
     def get_headers(self, header=None):
         """
-        Returns the current header or all headers if none is specified.
+        Returns the requested header or all headers if none is specified.
         """
-        if header is None:
+
+        if not self.session.headers:
+            self.logger.debug('No headers yet, call send() 1st.')
+            return
+
+        if not header:
             return self.session.headers
         else:
             return self.session.headers[header]
