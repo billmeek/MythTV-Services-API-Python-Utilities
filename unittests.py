@@ -351,6 +351,16 @@ class MythTVServicesAPI(unittest.TestCase):
 
         utc_to_local_data = {
             # time: response
+            '20170101 00:01:02': None,
+            '2017-01-01 00:01:09': '2016-12-31 19:01',
+            '2017-01-01 00:01:22': '2016-12-31 19:01',
+        }
+
+        for time, response in utc_to_local_data.items():
+            self.assertEqual(util.utc_to_local(utctime=time), response)
+
+        utc_to_local_data = {
+            # time: response
             None: None,
             '': None,
             '20170101 00:01:02': None,
@@ -359,10 +369,13 @@ class MythTVServicesAPI(unittest.TestCase):
         }
 
         for time, response in utc_to_local_data.items():
-            self.assertEqual(util.utc_to_local(utctime=time), response)
+            self.assertEqual(util.utc_to_local(utctime=time,
+                                               omitseconds=False), response)
 
         self.assertEqual(util.utc_to_local(utctime='2017-01-01T00:01:02Z',
-                                           omityear=True), '12-31 19:01:02')
+                                           omityear=True,
+                                           omitseconds=False),
+                         '12-31 19:01:02')
 
     def test_rec_status_to_string(self):
         '''

@@ -109,7 +109,7 @@ def create_find_time(time=''):
     return (time_stamp + timedelta(seconds=utc_offset)).strftime('%H:%M:%S')
 
 
-def utc_to_local(utctime='', omityear=False):
+def utc_to_local(utctime='', omityear=False, omitseconds=True):
     """
     Does exactly that conversion. get_utc_offset() should be run once before
     calling this function. A UTC offset of 0 will be used if UTC_OFFSET
@@ -145,6 +145,9 @@ def utc_to_local(utctime='', omityear=False):
         fromstring = '%m-%d %H:%M:%S'
     else:
         fromstring = '%Y-%m-%d %H:%M:%S'
+
+    if omitseconds:
+        fromstring = fromstring[:-3]
 
     return (time_stamp + timedelta(seconds=utc_offset)).strftime(fromstring)
 
