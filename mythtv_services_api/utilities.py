@@ -115,8 +115,9 @@ def utc_to_local(utctime='', omityear=False, omitseconds=True):
     calling this function. A UTC offset of 0 will be used if UTC_OFFSET
     isn't available, so the function won't abort.
 
-    Inputs:  utctime  = Full UTC timestamp, e.g. 2014-08-12T22:00:00[Z].
-             omityear = If True, then drop the 4 digit year and following -.
+    Inputs:  utctime:     Full UTC timestamp, e.g. 2014-08-12T22:00:00[Z].
+             omityear:    If True, then drop the 4 digit year and following -.
+             omitseconds: If False, don't return the trailing :SS
 
     Output: Local time, also a string. Possibly without the year- and always
             without the T between the data/time and no trailing Z.

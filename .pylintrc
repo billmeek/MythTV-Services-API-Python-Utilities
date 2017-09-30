@@ -19,14 +19,8 @@ reports=no
 max-line-length=79
 
 [DESIGN]
-# Maximum number of locals for function / method body. WAS: 15
-max-locals=20
-
-# Maximum number of return / yield for function / method body. WAS: 6
-max-returns=16
-
 # Maximum number of branch for function / method body. WAS: 12
-max-branches=25
+max-branches=20
 
 # Maximum number of attributes for a class (see R0902). WAS: 7
 max-attributes=10

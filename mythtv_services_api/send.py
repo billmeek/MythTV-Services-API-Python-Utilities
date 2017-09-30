@@ -250,6 +250,7 @@ class Send(object):
 
         # TODO: Should handle redirects here (mostly for remote backends.)
         if response.status_code > 299:
+            self.logger.debug('%s', response.text)
             raise RuntimeError('Unexpected status returned: {}: URL was: {}'
                                .format(response.status_code, url))
 
