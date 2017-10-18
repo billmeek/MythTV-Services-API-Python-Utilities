@@ -41,8 +41,8 @@ unittests:
 	@./unittests.py
 
 uninstall: clobber
-	@sudo -H pip2 uninstall $(PACKAGE) || :
-	@sudo -H pip3 uninstall $(PACKAGE) || :
+	@sudo -H pip2 uninstall --yes $(PACKAGE) || :
+	@sudo -H pip3 uninstall --yes $(PACKAGE) || :
 
 version:
 	@test -n "$(VERSION)" || (echo "\nVERSION wasn't set!\n" && exit 1)
