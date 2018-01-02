@@ -119,6 +119,9 @@ class Send(object):
         own. The defaults are all False except for 'user', 'pass' and
         'timeout'.
 
+        opts['novalidate']: Don't check the server version string for the
+                         MythTV version number.
+
         opts['noetag']:  Don't request the back/frontend to check for matching
                          ETag. Mostly for testing.
 
@@ -254,7 +257,8 @@ class Send(object):
             raise RuntimeError('Unexpected status returned: {}: URL was: {}'
                                .format(response.status_code, url))
 
-        self._validate_header(response.headers['Server'])
+        if not self.opts['novalidate']:
+            self._validate_header(response.headers['Server'])
 
         self.logger.debug('Response headers: %s', response.headers)
 
@@ -314,7 +318,8 @@ class Send(object):
         if not isinstance(self.opts, dict):
             self.opts = {}
 
-        for option in ('noetag', 'nogzip', 'usexml', 'wrmi', 'wsdl'):
+        for option in ('noetag', 'nogzip', 'usexml', 'wrmi', 'wsdl',
+            'novalidate'):
             try:
                 self.opts[option]
             except (KeyError, TypeError):
