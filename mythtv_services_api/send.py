@@ -27,7 +27,7 @@ from ._version import __version__
 # an HTTP POST is potentially dangerous.                     #
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
 
-MYTHTV_VERSION_LIST = ('0.28', '29', '30')
+MYTHTV_VERSION_LIST = ('0.27', '0.28', '29', '30')
 
 
 class Send(object):
@@ -423,7 +423,8 @@ class Send(object):
 
             MythTV/30-Pre-9-g1234567-dirty Linux/3.13.0-85-generic UPnP/1.0.
             MythTV/29-pre-5-g6865940-dirty Linux/3.13.0-85-generic UPnP/1.0.
-            MythTV/28.0-10-g57c1afb Linux/4.4.0-21-generic UPnP/1.0.
+            MythTV/0.28.0-10-g57c1afb Linux/4.4.0-21-generic UPnP/1.0.
+            Linux 3.13.0-65-generic, UPnP/1.0, MythTV 0.27.20150622-1
         """
 
         if not header:
@@ -433,7 +434,7 @@ class Send(object):
         self.logger.debug('Received Server: %s', header)
 
         for version in MYTHTV_VERSION_LIST:
-            if re.search('MythTV/' + version, header):
+            if re.search('MythTV.' + version, header):
                 self.server_version = version
                 return
 
@@ -467,7 +468,7 @@ class Send(object):
 
         if not header:
             return self.session.headers
-        else:
-            return self.session.headers[header]
+
+        return self.session.headers[header]
 
 # vim: set expandtab tabstop=4 shiftwidth=4 smartindent noai colorcolumn=80:
