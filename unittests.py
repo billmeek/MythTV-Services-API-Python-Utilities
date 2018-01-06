@@ -28,7 +28,7 @@ BACKEND = None
 TEST_DVR_VERSION = '6.4'
 TEST_HOST = 'mc0'
 TEST_SERVER_VERSION = '30'
-TEST_UTC_OFFSET = -18000
+TEST_UTC_OFFSET = -21600
 
 # These two are most likely OK:
 TEST_ENDPOINT = 'Dvr/version'
@@ -288,6 +288,17 @@ class MythTVServicesAPI(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, response):
                 BACKEND._validate_header(header)
 
+        # Test valid cases
+        header_data = {
+            'MythTV/30-Pre-9-g1234567-dirty Linux/3.13.0-85-generic UPnP/1.0',
+            'MythTV/29-pre-5-g6865940-dirty Linux/3.13.0-85-generic UPnP/1.0',
+            'MythTV/0.28.0-10-g57c1afb Linux/4.4.0-21-generic UPnP/1.0',
+            'Linux 3.13.0-65-generic, UPnP/1.0, MythTV 0.27.2015',
+        }
+
+        for header in header_data:
+            self.assertEqual(BACKEND._validate_header(header), None)
+
     def test_get_utc_offset(self):
         '''
         Test get_utc_offset(), which has already been used, but
@@ -310,9 +321,9 @@ class MythTVServicesAPI(unittest.TestCase):
             '': None,
             '20170101 08:01:02': -1,
             '2017-01-01 09:01:02': -1,
-            '2017-01-01T00:01:02': '19:01:02',
-            '2017-01-01T00:01:03Z': '19:01:03',
-            '2017-11-21T00:01:04Z': '19:01:04',
+            '2017-01-01T00:01:02': '18:01:02',
+            '2017-01-01T00:01:03Z': '18:01:03',
+            '2017-11-21T00:01:04Z': '18:01:04',
         }
 
         for time, response in create_find_time_data.items():
@@ -352,8 +363,8 @@ class MythTVServicesAPI(unittest.TestCase):
         utc_to_local_data = {
             # time: response
             '20170101 00:01:02': None,
-            '2017-01-01 00:01:09': '2016-12-31 19:01',
-            '2017-01-01 00:01:22': '2016-12-31 19:01',
+            '2017-01-01 00:01:09': '2016-12-31 18:01',
+            '2017-01-01 00:01:22': '2016-12-31 18:01',
         }
 
         for time, response in utc_to_local_data.items():
@@ -364,8 +375,8 @@ class MythTVServicesAPI(unittest.TestCase):
             None: None,
             '': None,
             '20170101 00:01:02': None,
-            '2017-01-01 00:01:09': '2016-12-31 19:01:09',
-            '2017-01-01 00:01:22': '2016-12-31 19:01:22',
+            '2017-01-01 00:01:09': '2016-12-31 18:01:09',
+            '2017-01-01 00:01:22': '2016-12-31 18:01:22',
         }
 
         for time, response in utc_to_local_data.items():
@@ -375,7 +386,7 @@ class MythTVServicesAPI(unittest.TestCase):
         self.assertEqual(util.utc_to_local(utctime='2017-01-01T00:01:02Z',
                                            omityear=True,
                                            omitseconds=False),
-                         '12-31 19:01:02')
+                         '12-31 18:01:02')
 
     def test_rec_status_to_string(self):
         '''
