@@ -126,7 +126,6 @@ class Send(object):
                          Useful if watching protocol with a tool that doesn't
                          uncompress it.
 
-
         opts['timeout']: May be set, in seconds. Examples: 5, 0.01. Used to
                          prevent script from waiting indefinitely for a reply
                          from the server. Note: a timeout exception is only
@@ -399,6 +398,8 @@ class Send(object):
 
         # TODO: Problem with the BE not accepting postdata in the initial
         # authorized query, Using a GET first as a workaround.
+        #
+        # Looks like a bug, Myth/version works for the backend.
 
         try:
             if self.opts['user'] and self.opts['pass']:
@@ -460,6 +461,7 @@ class Send(object):
     def get_headers(self, header=None):
         """
         Returns the requested header or all headers if none is specified.
+        These are the headers sent, not those received from the backend.
         """
 
         if not self.session.headers:
