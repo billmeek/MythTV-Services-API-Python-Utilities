@@ -9,9 +9,9 @@ output-format=colorized
 reports=no
 
 [MISCELLANEOUS]
-# List of note tags to take in consideration, separated by a comma. HAD: TODO
+# List of note tags to take in consideration, separated by a comma. HAD: TODO,XXX
 # Uncommenting the next line would remove the TODO warnings.
-#notes=FIXME,XXX
+notes=FIXME
 
 [FORMAT]
 # Maximum number of characters on a single line. WAS: 80
