@@ -25,7 +25,7 @@ global BACKEND
 BACKEND = None
 
 # Adjust for the system under test:
-TEST_DVR_VERSION = '6.4'
+TEST_DVR_VERSION = '6.5'
 TEST_HOST = 'mc0'
 TEST_SERVER_VERSION = '30'
 TEST_UTC_OFFSET = -21600
