@@ -397,7 +397,7 @@ class Send(object):
         self.logger.debug('New session')
 
         # TODO: Problem with the BE not accepting postdata in the initial
-        # authorized query, Using a GET first as a workaround.
+        # authorized query, Send a GET first as a workaround.
         #
         # Looks like a bug, Myth/version works for the backend.
 
@@ -445,16 +445,15 @@ class Send(object):
     @property
     def get_server_version(self):
         """
-        Returns the version of the back/frontend. Only works if send() has
-        been called.
+        Returns the version of the back/frontend. Only works after send()
+        has been called.
         """
         return self.server_version
 
     @property
     def get_opts(self):
         """
-        Returns the all opts{}, whether set manually or automatically
-        been called.
+        Returns all opts{}, whether set manually or automatically.
         """
         return self.opts
 
