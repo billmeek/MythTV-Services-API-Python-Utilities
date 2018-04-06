@@ -1,5 +1,6 @@
 *.pyc
 *.swp
+api
 push.sh
 remote_pkg.sh
 build/
