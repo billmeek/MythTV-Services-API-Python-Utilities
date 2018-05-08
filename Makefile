@@ -10,7 +10,7 @@ SOURCES = \
 	$(PACKAGE)/_version.py
 
 usage:
-	@echo "\nUse: make target VERSION=M.m.f, e.g. make install VERSION=0.1.9\n"
+	@echo "\nUse: make <target> VERSION=M.m.f, e.g. make install VERSION=0.1.9\n"
 
 install: unittests uninstall
 	@echo "Installing VERSION: $(VERSION)"
