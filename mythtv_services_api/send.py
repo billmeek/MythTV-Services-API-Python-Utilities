@@ -196,7 +196,6 @@ class Send(object):
 
             import logging
 
-                logger = logging.getLogger(__name__)
                 logging.basicConfig(level=logging.DEBUG
                                     if args['debug'] else logging.INFO)
                 logging.getLogger('requests.packages.urllib3')
