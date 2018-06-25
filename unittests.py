@@ -25,7 +25,7 @@ global BACKEND
 BACKEND = None
 
 # Adjust for the system under test:
-TEST_DVR_VERSION = '6.5'
+TEST_DVR_VERSION = '6.7'
 TEST_HOST = 'mc0'
 TEST_SERVER_VERSION = '30'
 TEST_UTC_OFFSET = -18000
@@ -161,29 +161,29 @@ class MythTVServicesAPI(unittest.TestCase):
         value = BACKEND.send(endpoint='Myth/GetSetting', **kwargs)['String']
         self.assertIsNotNone(value)
 
-        put = 'Myth/PutSetting'
+        url_protection = 'Myth/ManageUrlProtection'
 
         # Turn authentication on...
         kwargs = {'opts': {'user': 'admin', 'pass': 'mythtv', 'wrmi': True},
-                  'postdata': {'Key': 'HTTP/Protected/Urls', 'Value': '/Myth'}}
-        self.assertEqual(BACKEND.send(endpoint=put, **kwargs),
+                  'postdata': {'Services': 'All', 'AdminPassword': 'mythtv'}}
+        self.assertEqual(BACKEND.send(endpoint=url_protection, **kwargs),
                          {'bool': 'true'})
 
         # Create a new session and try a POST with an invalid password...
         BACKEND.close_session()
         BACKEND = api.Send(host=TEST_HOST)
         kwargs = {'opts': {'user': 'admin', 'pass': 'XmythtvX', 'wrmi': True},
-                  'postdata': {'Key': 'HTTP/Protected/Urls', 'Value': '/Fail'}}
+                  'postdata': {'Services': 'All', 'AdminPassword': 'mythtv'}}
         with self.assertRaisesRegex(RuntimeError,
                                     r'Unauthorized \(401\)..*password'):
-            BACKEND.send(endpoint=put, **kwargs)
+            BACKEND.send(endpoint=url_protection, **kwargs)
 
         # Turn authentication back off...
         BACKEND.close_session()
         BACKEND = api.Send(host=TEST_HOST)
         kwargs = {'opts': {'user': 'admin', 'pass': 'mythtv', 'wrmi': True},
-                  'postdata': {'Key': 'HTTP/Protected/Urls', 'Value': value}}
-        self.assertEqual(BACKEND.send(endpoint=put, **kwargs),
+                  'postdata': {'Services': 'None', 'AdminPassword': 'mythtv'}}
+        self.assertEqual(BACKEND.send(endpoint=url_protection, **kwargs),
                          {'bool': 'true'})
 
     def test_headers_using_default_opts(self):
