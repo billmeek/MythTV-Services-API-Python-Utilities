@@ -15,9 +15,9 @@ usage:
 install: unittests uninstall
 	@echo "Installing VERSION: $(VERSION)"
 	@python2 setup.py bdist_wheel
-	@sudo -H pip2 install dist/$(PACKAGE)-$(VERSION)-py2-none-any.whl
+	@sudo --set-home pip2 install dist/$(PACKAGE)-$(VERSION)-py2-none-any.whl
 	@python3 setup.py bdist_wheel
-	@sudo -H pip3 install dist/$(PACKAGE)-$(VERSION)-py3-none-any.whl
+	@sudo --set-home pip3 install dist/$(PACKAGE)-$(VERSION)-py3-none-any.whl
 
 push: version unittests
 	@echo "Pushing VERSION: $(VERSION)"
@@ -28,21 +28,21 @@ push: version unittests
 	@git push
 
 clean:
-	@rm -f  $(PACKAGE)/*.pyc
-	@rm -rf $(PACKAGE)/__pycache__
-	@rm -rf $(PACKAGE).egg-info
-	@rm -rf build/*
+	@rm --force  $(PACKAGE)/*.pyc
+	@rm --recursive --force $(PACKAGE)/__pycache__
+	@rm --recursive --force $(PACKAGE).egg-info
+	@rm --recursive --force build/*
 
 clobber: version clean
 	@echo "Clobbering VERSION: $(VERSION)"
-	@git rm -f --ignore-unmatch dist/$(PACKAGE)-$(VERSION)-py?-none-any.whl
+	@git rm --force --ignore-unmatch dist/$(PACKAGE)-$(VERSION)-py?-none-any.whl
 
 unittests:
 	@./unittests.py
 
 uninstall: clobber
-	@sudo -H pip2 uninstall --yes $(PACKAGE) || :
-	@sudo -H pip3 uninstall --yes $(PACKAGE) || :
+	@sudo --set-home pip2 uninstall --yes $(PACKAGE) || :
+	@sudo --set-home pip3 uninstall --yes $(PACKAGE) || :
 
 version:
 	@test -n "$(VERSION)" || (echo "\nVERSION wasn't set!\n" && exit 1)
