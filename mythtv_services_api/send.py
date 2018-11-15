@@ -464,7 +464,7 @@ class Send(object):
 
         if not self.session.headers:
             self.logger.debug('No headers yet, call send() 1st.')
-            return
+            return None
 
         if not header:
             return self.session.headers

@@ -132,7 +132,7 @@ def utc_to_local(utctime='', omityear=False, omitseconds=True):
 
     if not utctime:
         LOG.error('utc_to_local(): utctime is empty!')
-        return
+        return None
 
     utctime = utctime.replace('Z', '').replace('T', ' ')
 
@@ -140,7 +140,7 @@ def utc_to_local(utctime='', omityear=False, omitseconds=True):
         time_stamp = datetime.strptime(utctime, '%Y-%m-%d %H:%M:%S')
     except ValueError:
         LOG.error('utc_to_local(): bad timestamp format!')
-        return
+        return None
 
     if omityear:
         fromstring = '%m-%d %H:%M:%S'
