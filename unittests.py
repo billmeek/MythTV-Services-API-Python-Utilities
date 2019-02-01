@@ -25,9 +25,9 @@ global BACKEND
 BACKEND = None
 
 # Adjust for the system under test:
-TEST_DVR_VERSION = '6.7'
+TEST_DVR_VERSION = '6.6'
 TEST_HOST = 'ofc0'
-TEST_SERVER_VERSION = '30'
+TEST_SERVER_VERSION = '31'
 TEST_UTC_OFFSET = -21600
 
 # These two are most likely OK:
@@ -290,8 +290,9 @@ class MythTVServicesAPI(unittest.TestCase):
 
         # Test valid cases
         header_data = {
-            'MythTV/30-Pre-9-g1234567-dirty Linux/3.13.0-85-generic UPnP/1.0',
-            'MythTV/29-pre-5-g6865940-dirty Linux/3.13.0-85-generic UPnP/1.0',
+            'MythTV/31-Pre-43-g2bb8237 Linux/4.4.0-141-generic UPnP/1.0',
+            'MythTV/30-Pre-9-g1234567 Linux/3.13.0-85-generic UPnP/1.0',
+            'MythTV/29-pre-5-g6865940 Linux/3.13.0-85-generic UPnP/1.0',
             'MythTV/0.28.0-10-g57c1afb Linux/4.4.0-21-generic UPnP/1.0',
             'Linux 3.13.0-65-generic, UPnP/1.0, MythTV 0.27.2015',
         }
