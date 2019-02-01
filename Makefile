@@ -11,6 +11,7 @@ SOURCES = \
 
 usage:
 	@echo "\nUse: make <target> VERSION=M.m.f, e.g. make install VERSION=0.1.9\n"
+	@echo "This package is now a part of MythTV version 30.0\n"
 
 install: unittests uninstall
 	@echo "Installing VERSION: $(VERSION)"
