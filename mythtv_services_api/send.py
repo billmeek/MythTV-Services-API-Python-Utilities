@@ -239,7 +239,8 @@ class Send(object):
                                              timeout=self.opts['timeout'])
             else:
                 response = self.session.get(url, timeout=self.opts['timeout'])
-        except exceptions:
+        except exceptions as error:
+            self.logger.error('%s', error)
             raise RuntimeError('Connection problem/Keyboard Interrupt, URL={}'
                                .format(url))
 

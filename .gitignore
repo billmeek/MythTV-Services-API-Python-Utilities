@@ -6,3 +6,4 @@ remote_pkg.sh
 build/
 mythtv_services_api.egg-info/
 unit_tests/
+.idea/
